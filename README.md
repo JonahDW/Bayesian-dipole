@@ -1,8 +1,12 @@
-# Bayesian-dipole
+# Bayesian-dipole [![DOI](https://zenodo.org/badge/644438254.svg)](https://zenodo.org/badge/latestdoi/644438254)
 
 The purpose of this module is to estimate parameters of the cosmic number count dipole from catalogues of (radio) sources using Bayesian methods. Catalogues are pixelised using the python implementation of HEALPix, [healpy](https://healpy.readthedocs.io/en/latest/). The software used for Bayesian inference is [bilby](https://lscsoft.docs.ligo.org/bilby/installation.html), which can wrap around a range of different samplers. These scripts use [emcee](https://emcee.readthedocs.io/en/stable/) for sampling.
 
 Setup for any given catalogue (or set of catalogues!) is defined in a json file in the `parsets` directory, several examples are already present. The name of the json file (without the extension) is then given to the program. Alternatively, the program can be called with the argument `SIM`, in which case a catalogue is simulated using the parameters specified in `parsets/simulation.json`.
+
+If you use this code and wish to cite it, you can do so as follows:
+
+```Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference v0.1, Zenodo, DOI: 10.5281/zenodo.7962923```
 
 ## dipole_likelihood_poisson.py
 
