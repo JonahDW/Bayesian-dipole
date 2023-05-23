@@ -6,7 +6,10 @@ Setup for any given catalogue (or set of catalogues!) is defined in a json file 
 
 If you use this code and wish to cite it, you can do so as follows:
 
-```Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference v0.1, Zenodo, DOI: 10.5281/zenodo.7962923```
+```
+Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference v0.1, 
+Zenodo, DOI: 10.5281/zenodo.7962923
+```
 
 ## dipole_likelihood_poisson.py
 
