@@ -1,0 +1,40 @@
+[{
+	"catalog" : {
+		"path" : "data/NVSS_CATALOG_INT.fit",
+		"name" : "NVSS_C",
+		"default_flux_cut" : 15.0
+		},
+	"columns" : {
+		"ra_col" : "RA(2000)",
+		"dec_col" : "DEC(2000)",
+		"flux_col" : "S1.4"
+		},
+	"cuts" : {
+		"galactic_cut" : 7.0,
+		"mask_bright" : 2500,
+		"dec_low" : -10,
+		"dec_high" : 78,
+		"dec_include" : true,
+		"mask_file" : "nvss_mask.json"
+		}
+},
+{
+	"catalog" : {
+		"path" : "data/NVSS_CATALOG_INT.fit",
+		"name" : "NVSS_DnC",
+		"default_flux_cut" : 15.0
+		},
+	"columns" : {
+		"ra_col" : "RA(2000)",
+		"dec_col" : "DEC(2000)",
+		"flux_col" : "S1.4"
+		},
+	"cuts" : {
+		"galactic_cut" : 7.0,
+		"mask_bright" : 2500,
+		"dec_low" : -10,
+		"dec_high" : 78,
+		"dec_include" : false,
+		"mask_file" : "nvss_mask.json"
+		}
+}]

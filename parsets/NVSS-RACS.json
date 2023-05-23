@@ -1,0 +1,39 @@
+[{
+	"catalog" : {
+		"path" : "data/NVSS_CATALOG_INT.fit",
+		"name" : "NVSS",
+		"default_flux_cut" : 15.0
+		},
+	"columns" : {
+		"ra_col" : "RA(2000)",
+		"dec_col" : "DEC(2000)",
+		"flux_col" : "S1.4"
+		},
+	"cuts" : {
+		"galactic_cut" : 7.0,
+		"mask_bright" : 2500,
+		"dec_low" : -40,
+		"dec_high" : 90,
+		"mask_file" : "nvss_mask.json"
+		}
+},
+{
+	"catalog" : {
+		"path" : "data/racs_galcut.fits",
+		"name" : "RACS",
+		"default_flux_cut" : 15.0
+		},
+	"columns" : {
+		"ra_col" : "ra",
+		"dec_col" : "dec",
+		"flux_col" : "total_flux_source",
+		"rms_col" : "noise",
+		"peak_flux_col" : "peak_flux"
+		},
+	"cuts" : {
+		"mask_bright" : 2500,
+		"dec_low" : -90,
+		"dec_high" : 40,
+		"mask_file" : "racs_mask.json"
+		}
+}]
