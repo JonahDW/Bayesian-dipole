@@ -10,7 +10,7 @@ If you use this code and wish to cite it, you can do so as follows:
 Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference v0.1, Zenodo, DOI: 10.5281/zenodo.7962923
 ```
 
-This code has been used to produce the results in Wagenveld et al. (2023, in prep). The catalogues that were used are the [NVSS](https://www.cv.nrao.edu/nvss/) and [RACS](https://research.csiro.au/casda/the-rapid-askap-continuum-survey-stokes-i-source-catalogue-data-release-1/) catalogues. 
+This code has been used to produce the results in [Wagenveld et al. (2023)](https://arxiv.org/abs/2305.15335). The catalogues that were used are the [NVSS](https://www.cv.nrao.edu/nvss/) and [RACS](https://research.csiro.au/casda/the-rapid-askap-continuum-survey-stokes-i-source-catalogue-data-release-1/) catalogues. 
 
 ## dipole_likelihood_poisson.py
 
