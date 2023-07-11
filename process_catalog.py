@@ -52,6 +52,7 @@ class SkyData:
         self.NSIDE = None
         self.hpx_map = None
         self.hpx_mask = None
+        self.user_mask = None
         self.sigma_ref = None
         self.total_sources = len(catalog)
 
@@ -66,7 +67,8 @@ class SkyData:
         print(f'--- Catalog {self.cat_name} loaded ---')
 
     def apply_cuts(self, flux_cut=None, galactic_cut=None, dec_low=None,
-            dec_high=None, dec_include=True, snr_cut=None, mask_bright=None, mask_file=None):
+            dec_high=None, dec_include=True, snr_cut=None, mask_bright=None,
+            mask_file=None, invert_mask_file=False):
         '''
         Apply cuts in the data to prepare for a dipole measurement
 
@@ -111,24 +113,48 @@ class SkyData:
             self.catalog = self.catalog[mask]
 
         if mask_file:
-            path = Path(__file__).parent / 'parsets' / mask_file
-            with open(path) as infile:
-                mask = json.load(infile)
+            if not isinstance(mask_file, list):
+                mask_file = [mask_file]
+                invert_mask_file = [invert_mask_file]
+            for i, file in enumerate(mask_file):
+                # Parse json file
+                if file.endswith('.json'):
+                    print('Using mask file',file)
+                    path = Path(__file__).parent / 'parsets' / file
+                    with open(path) as infile:
+                        mask = json.load(infile)
 
-            for mask_area in mask:
-                ra = np.copy(self.catalog[self.ra_col])
-                dec = np.copy(self.catalog[self.dec_col])
+                    mask_sources = np.zeros(len(self.catalog))
+                    for mask_area in mask:
+                        ra = np.copy(self.catalog[self.ra_col])
+                        dec = np.copy(self.catalog[self.dec_col])
 
-                # Check and correct for RA wrap
-                if mask[mask_area]['ra_min'] > mask[mask_area]['ra_max']:
-                    ra[ra > 180] -= 360
-                    mask[mask_area]['ra_min'] -= 360
+                        # Check and correct for RA wrap
+                        if mask[mask_area]['ra_min'] > mask[mask_area]['ra_max']:
+                            ra[ra > 180] -= 360
+                            mask[mask_area]['ra_min'] -= 360
 
-                idx = np.logical_or.reduce((dec < mask[mask_area]['dec_min'],
-                                            dec > mask[mask_area]['dec_max'],
-                                            ra < mask[mask_area]['ra_min'],
-                                            ra > mask[mask_area]['ra_max']))
-                self.catalog = self.catalog[idx]
+                        idx = np.logical_or.reduce((dec < mask[mask_area]['dec_min'],
+                                                    dec > mask[mask_area]['dec_max'],
+                                                    ra < mask[mask_area]['ra_min'],
+                                                    ra > mask[mask_area]['ra_max']))
+                        mask_sources = np.logical_or(mask_sources, np.invert(idx))
+
+                    if invert_mask_file[i]:
+                        self.catalog = self.catalog[mask_sources]
+                    else:
+                        self.catalog = self.catalog[~mask_sources]
+
+                # Parse fits file
+                if file.endswith('.fits'):
+                    print('Using mask file',file)
+
+                    path = Path(__file__).parent / 'parsets' / file
+                    mask = hp.read_map(path)
+                    if invert_mask_file[i]:
+                        self.user_mask = np.invert(mask)
+                    else:
+                        self.user_mask = mask
 
         print(f'Number of sources in catalog after masking is {len(self.catalog)}')
 
@@ -153,6 +179,10 @@ class SkyData:
             bad_pix = hp.get_all_neighbours(NSIDE, np.where(self.hpx_map == 0)[0])
             self.hpx_map[bad_pix.flatten()] = 0
         self.hpx_mask = self.hpx_map == 0
+
+        if self.user_mask is not None:
+            self.hpx_mask = np.logical_or(self.hpx_mask, self.user_mask)
+            self.hpx_map[self.hpx_mask] = 0
 
         print(f'--- Catalog {self.cat_name} discretized into healpix map with NSIDE {NSIDE} ---')
         print(f'Number of sources after mapping is {int(np.sum(self.hpx_map))}')

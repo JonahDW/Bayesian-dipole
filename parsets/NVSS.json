@@ -14,6 +14,7 @@
 		"mask_bright" : 2500,
 		"dec_low" : -40,
 		"dec_high" : 90,
-		"mask_file" : "nvss_mask.json"
+		"mask_file" : "nvss_mask.json",
+		"invert_mask_file" : false
 		}
 }]
