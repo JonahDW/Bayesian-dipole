@@ -12,9 +12,13 @@
 	"cuts" : {
 		"galactic_cut" : 7.0,
 		"mask_bright" : 2500,
-		"dec_low" : -40,
-		"dec_high" : 90,
 		"mask_file" : "nvss_mask.json",
 		"invert_mask_file" : false
-		}
+		},
+	"additional_cuts" : [{ 
+		"col" : "DEC(2000)",
+		"low" : -40,
+	    "high" : 90,
+		"include" : true
+		}]
 }]

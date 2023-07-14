@@ -66,32 +66,21 @@ class SkyData:
 
         print(f'--- Catalog {self.cat_name} loaded ---')
 
-    def apply_cuts(self, flux_cut=None, galactic_cut=None, dec_low=None,
-            dec_high=None, dec_include=True, snr_cut=None, mask_bright=None,
-            mask_file=None, invert_mask_file=False):
+    def apply_cuts(self, flux_cut=None, galactic_cut=None, snr_cut=None, 
+            mask_bright=None, mask_file=None, invert_mask_file=False):
         '''
         Apply cuts in the data to prepare for a dipole measurement
 
         Keyword arguments:
-        flux_cut (float)     -- Lower flux  density cut
-        galactic cut (float) -- Galactic latitude below which sources should be cut
-        dec_low (float)      -- Lower limit of declination
-        dec_high (float)     -- Upper limit of declination
-        dec_include (bool)   -- Whether to include or exclude the specified declination range
-        mask_bright (float)  -- Mask sources and direct environment above this flux density
-        mask_file (string)   -- Filename containing regions to mask
+        flux_cut (float)        -- Lower flux  density cut
+        galactic cut (float)    -- Galactic latitude below which sources should be cut
+        mask_bright (float)     -- Mask sources and direct environment above this flux density
+        mask_file (string)      -- File containing areas to mask
+        invert_mask_file (bool) -- Invert the mask specified by the mask file
         '''
         if galactic_cut:
             self.catalog = self.catalog[np.logical_or(self.catalog['b'] < -1*galactic_cut,
                                                       self.catalog['b'] > galactic_cut)]
-
-        if dec_low and dec_high:
-            if dec_include:
-                self.catalog = self.catalog[np.logical_and(self.catalog[self.dec_col] > dec_low,
-                                                           self.catalog[self.dec_col] < dec_high)]
-            else:
-                self.pointings = self.pointings[np.logical_or(self.catalog[self.dec_col] < dec_low,
-                                                              self.catalog[self.dec_col] > dec_high)]
 
         if flux_cut:
             self.catalog = self.catalog[self.catalog[self.flux_col] > flux_cut]
@@ -157,6 +146,25 @@ class SkyData:
                         self.user_mask = mask
 
         print(f'Number of sources in catalog after masking is {len(self.catalog)}')
+
+    def apply_additional_cuts(self, col, low, high, include=True):
+        '''
+        Apply additional cuts to the catalog
+
+        Keyword arguments:
+        col (string)   -- Column name
+        low (float)    -- Value of lower limit
+        high (float)   -- Value of upper limit
+        include (bool) -- Whether to include all values with set limits
+        '''
+        if include:
+            self.catalog = self.catalog[np.logical_and(self.catalog[col] > low,
+                                                       self.catalog[col] < high)]
+        else:
+            self.catalog = self.catalog[np.logical_or(self.catalog[col] < low,
+                                                          self.catalog[col] > high)]
+
+        print(f"Number of sources after additional cuts is {len(self.catalog)}")
 
     def to_healpix_map(self, NSIDE, strict_mask=True):
         '''
@@ -429,6 +437,10 @@ def catalog_data(params, NSIDE, flux_cut, snr_cut, fit_noise=False):
     catalog = Table.read(params['catalog']['path'])
     data = SkyData(catalog, params['catalog']['name'], **params['columns'])
     data.apply_cuts(**params['cuts'])
+
+    # Additional cuts
+    for cut in params['additional_cuts']:
+        data.apply_additional_cuts(**cut)
 
     if fit_noise:
         data.apply_cuts(snr_cut=snr_cut)

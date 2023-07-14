@@ -13,8 +13,12 @@
 		},
 	"cuts" : {
 		"mask_bright" : 2500,
-		"dec_low" : -90,
-		"dec_high" : 40,
 		"mask_file" : "racs_mask.json"
-		}
+		},
+	"additional_cuts" : [{ 
+		"col" : "dec",
+		"low" : -90,
+	    "high" : 40,
+		"include" : true
+		}]
 }]
