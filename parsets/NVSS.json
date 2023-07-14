@@ -18,7 +18,7 @@
 	"additional_cuts" : [{ 
 		"col" : "DEC(2000)",
 		"low" : -40,
-	    "high" : 90,
+		"high" : 90,
 		"include" : true
 		}]
 }]
