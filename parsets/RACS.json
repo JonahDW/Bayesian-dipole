@@ -18,7 +18,7 @@
 	"additional_cuts" : [{ 
 		"col" : "dec",
 		"low" : -90,
-	    "high" : 40,
+		"high" : 40,
 		"include" : true
 		}]
 }]
