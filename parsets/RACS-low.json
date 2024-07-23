@@ -1,0 +1,26 @@
+[{
+	"catalog" : {
+		"path" : "data/racs_low.fits",
+		"name" : "RACS-low",
+		"default_flux_cut" : 15.0
+		},
+	"columns" : {
+		"ra_col" : "ra",
+		"dec_col" : "dec",
+		"flux_col" : "total_flux_source",
+		"rms_col" : "noise",
+		"peak_flux_col" : "peak_flux"
+		},
+	"cuts" : {
+		"galactic_cut" : 7.0,
+		"mask_bright" : 2500,
+		"mask_file" : "racs_mask.csv",
+		"invert_mask_file" : false
+		},
+	"additional_cuts" : [{ 
+		"col" : "dec",
+		"low" : -90,
+	    "high" : 30,
+		"include" : true
+		}]
+}]
