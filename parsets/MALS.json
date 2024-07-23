@@ -1,0 +1,36 @@
+[{
+	"catalog" : {
+        "name" : "MALS",
+		"path" : "data/mals-lwb-sources.fits",
+		"pointings_path" : "data/mals-lwb-pointings.fits",
+		"default_flux_cut" : 3e-4
+		},
+	"columns" : {
+		"ra_col" : "RA",
+		"dec_col" : "DEC",
+		"flux_col" : "Isl_Total_flux",
+		"pointing_col" : "Pointing_id"
+		},
+	"pointing_columns" : {
+	    "pointing_col" : "source_id",
+		"ra_col" : "RA",
+		"dec_col" : "DEC",
+		"rms_col" : "sigma20"
+		},
+	"source_cuts" : [{
+        "bool_col" : "Flag_Artifact",
+        "exclude_col" : true
+		}],
+	"pointing_cuts" : [{ 
+		"col" : "rms",
+		"low" : 1e-5,
+		"high" : 4.5e-5,
+		"include" : true
+		},
+		{ 
+        "col" : "b",
+		"low" : -10,
+		"high" : 10,
+		"include" : false
+		}]
+}]

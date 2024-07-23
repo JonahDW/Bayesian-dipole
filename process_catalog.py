@@ -16,18 +16,12 @@ import astropy.units as u
 from astropy.table import Table, vstack
 from astropy.coordinates import SkyCoord
 
-import simulate_observations as sim_obs
 import helpers
-
-plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
-plt.rc('text', usetex=True)
-
-plt.rcParams['axes.labelsize'] = 14
-plt.rcParams['axes.titlesize'] = 14
 
 class SkyData:
 
-    def __init__(self, catalog, catalog_name, ra_col, dec_col, flux_col, rms_col=None, peak_flux_col=None):
+    def __init__(self, catalog, catalog_name, ra_col, dec_col, flux_col, 
+                 rms_col=None, peak_flux_col=None):
         self.catalog = catalog
         self.cat_name = catalog_name
 
@@ -56,6 +50,9 @@ class SkyData:
         self.sigma_ref = None
         self.total_sources = len(catalog)
 
+        self.alpha = None
+        self.x = None
+
         # Check if output directories exist and create them if not
         if not os.path.exists('Figures'):
             os.mkdir('Figures')
@@ -74,7 +71,8 @@ class SkyData:
         Keyword arguments:
         flux_cut (float)        -- Lower flux  density cut
         galactic cut (float)    -- Galactic latitude below which sources should be cut
-        mask_bright (float)     -- Mask sources and direct environment above this flux density
+        mask_bright (float)     -- Mask sources and direct environment 
+                                   above this flux density
         mask_file (string)      -- File containing areas to mask
         invert_mask_file (bool) -- Invert the mask specified by the mask file
         '''
@@ -86,16 +84,21 @@ class SkyData:
             self.catalog = self.catalog[self.catalog[self.flux_col] > flux_cut]
 
         if snr_cut:
-            self.catalog = self.catalog[self.catalog[self.peak_flux_col]/self.catalog[self.rms_col] > snr_cut]
+            snr = self.catalog[self.peak_flux_col]/self.catalog[self.rms_col]
+            self.catalog = self.catalog[snr > snr_cut]
 
         if mask_bright:
             # Remove bright sources and immediate vicinity
             bright = self.catalog[self.catalog[self.flux_col] > mask_bright]
 
             sep_constraint = 0.3 * u.deg
-            all_coord = SkyCoord(self.catalog[self.ra_col].data, self.catalog[self.dec_col].data, unit='deg')
-            bright_coord = SkyCoord(bright[self.ra_col].data, bright[self.dec_col].data, unit='deg')
-            idxbright, idxall, d2d, d3d = all_coord.search_around_sky(bright_coord, sep_constraint)
+            all_coord = SkyCoord(self.catalog[self.ra_col].data, 
+                                 self.catalog[self.dec_col].data, 
+                                 unit='deg')
+            bright_coord = SkyCoord(bright[self.ra_col].data, 
+                                    bright[self.dec_col].data, unit='deg')
+            idxbright, idxall, d2d, d3d = all_coord.search_around_sky(bright_coord, 
+                                                                      sep_constraint)
 
             mask = np.ones(len(self.catalog), dtype=bool)
             mask[idxall] = 0
@@ -106,44 +109,55 @@ class SkyData:
                 mask_file = [mask_file]
                 invert_mask_file = [invert_mask_file]
             for i, file in enumerate(mask_file):
-                # Parse json file
-                if file.endswith('.json'):
+                # Parse fits file
+                if file.endswith('.fits'):
                     print('Using mask file',file)
-                    path = Path(__file__).parent / 'parsets' / file
-                    with open(path) as infile:
-                        mask = json.load(infile)
+
+                    path = Path(__file__).parent / 'weights-masks' / file
+                    mask = hp.read_map(path)
+                    if invert_mask_file[i]:
+                        self.user_mask = np.invert(mask)
+                    else:
+                        self.user_mask = mask
+
+                # Assume table
+                else:
+                    print('Using mask file',file)
+                    path = Path(__file__).parent / 'weights-masks' / file
+                    mask = Table.read(path)
 
                     mask_sources = np.zeros(len(self.catalog))
                     for mask_area in mask:
                         ra = np.copy(self.catalog[self.ra_col])
                         dec = np.copy(self.catalog[self.dec_col])
 
-                        # Check and correct for RA wrap
-                        if mask[mask_area]['ra_min'] > mask[mask_area]['ra_max']:
-                            ra[ra > 180] -= 360
-                            mask[mask_area]['ra_min'] -= 360
+                        if 'ra_min' in mask.colnames:
+                            # Check and correct for RA wrap
+                            if mask_area['ra_min'] > mask_area['ra_max']:
+                                ra[ra > 180] -= 360
+                                mask_area['ra_min'] -= 360
 
-                        idx = np.logical_or.reduce((dec < mask[mask_area]['dec_min'],
-                                                    dec > mask[mask_area]['dec_max'],
-                                                    ra < mask[mask_area]['ra_min'],
-                                                    ra > mask[mask_area]['ra_max']))
+                            idx = np.logical_or.reduce((dec < mask_area['dec_min'],
+                                                        dec > mask_area['dec_max'],
+                                                        ra  < mask_area['ra_min'],
+                                                        ra  > mask_area['ra_max']))
+                        if 'radius' in mask.colnames:
+                            # Check and correct for RA wrap
+                            if mask_area['ra'] - mask_area['radius'] < 0:
+                                ra[ra > 180] -= 360
+
+                            source_coord = SkyCoord(ra, dec, unit='deg')
+                            mask_coord = SkyCoord(mask_area['ra'], 
+                                                  mask_area['dec'], unit='deg')
+                            dist = mask_coord.separation(source_coord)
+                            idx = dist > mask_area['radius'] * u.deg
+
                         mask_sources = np.logical_or(mask_sources, np.invert(idx))
 
                     if invert_mask_file[i]:
                         self.catalog = self.catalog[mask_sources]
                     else:
                         self.catalog = self.catalog[~mask_sources]
-
-                # Parse fits file
-                if file.endswith('.fits'):
-                    print('Using mask file',file)
-
-                    path = Path(__file__).parent / 'parsets' / file
-                    mask = hp.read_map(path)
-                    if invert_mask_file[i]:
-                        self.user_mask = np.invert(mask)
-                    else:
-                        self.user_mask = mask
 
         print(f'Number of sources in catalog after masking is {len(self.catalog)}')
 
@@ -162,7 +176,7 @@ class SkyData:
                                                        self.catalog[col] < high)]
         else:
             self.catalog = self.catalog[np.logical_or(self.catalog[col] < low,
-                                                          self.catalog[col] > high)]
+                                                      self.catalog[col] > high)]
 
         print(f"Number of sources after additional cuts is {len(self.catalog)}")
 
@@ -176,8 +190,12 @@ class SkyData:
         '''
         self.NSIDE = NSIDE
 
-        indices = hp.ang2pix(self.NSIDE, self.catalog['theta'], self.catalog['phi'])
-        idx, inverse, number_counts  = np.unique(indices, return_inverse=True, return_counts=True)
+        indices = hp.ang2pix(self.NSIDE, 
+                             self.catalog['theta'], 
+                             self.catalog['phi'])
+        idx, inverse, number_counts  = np.unique(indices,
+                                                 return_inverse=True,
+                                                 return_counts=True)
 
         NPIX = hp.nside2npix(self.NSIDE)
         self.hpx_map = np.zeros(NPIX)
@@ -196,6 +214,14 @@ class SkyData:
         print(f'Number of sources after mapping is {int(np.sum(self.hpx_map))}')
         self.total_sources = int(np.sum(self.hpx_map))
 
+    def apply_weights(self, weight_file):
+
+        print('Using weight file',weight_file)
+
+        path = Path(__file__).parent / 'weights-masks' / weight_file
+        weights = hp.read_map(path)
+        self.hpx_map = self.hpx_map / weights
+
     def median_healpix_map(self, NSIDE):
         '''
         Make a HEALPix map of the RMS, taking the median for each cell
@@ -204,7 +230,9 @@ class SkyData:
         NSIDE (int)       -- Resolution of HEALPix map
         '''
         indices = hp.ang2pix(NSIDE, self.catalog['theta'], self.catalog['phi'])
-        idx, inverse, number_counts  = np.unique(indices, return_inverse=True, return_counts=True)
+        idx, inverse, number_counts  = np.unique(indices, 
+                                                 return_inverse=True, 
+                                                return_counts=True)
 
         NPIX = hp.nside2npix(NSIDE)
         hpx_map = np.array([np.nanmedian(self.catalog[self.rms_col][indices == i]) for i in range(NPIX)])
@@ -280,7 +308,8 @@ class SkyData:
         print('Calculating mean values')
 
         if plot:
-            rms_range = np.linspace(fit_rms.min()/self.sigma_ref,fit_rms.max()/self.sigma_ref,50)
+            rms_range = np.linspace(fit_rms.min()/self.sigma_ref,
+                                    fit_rms.max()/self.sigma_ref, 50)
             plt.plot(rms_range*self.sigma_ref, power_law(rms_range, *popt), '--k', 
                      label=f'$N = {{{popt[0]:.0f}}}\cdot(\\sigma/\\sigma_0)^{{-{popt[1]:.2f}}}$')
             plt.scatter(fit_rms, fit_sources, s=1, marker='+', color='k', label='Data')
@@ -298,6 +327,37 @@ class SkyData:
             plt.close()
 
         return popt[0], popt[1]
+
+    def flux_power_law(self):
+        '''
+        Fit power law to flux distribution
+        '''
+        def power_law(x, a, b):
+            return a*x**(-b)
+
+        flux = self.catalog[self.flux_col]
+        bins = np.logspace(np.log10(flux.min()), np.log10(flux.max()), 50)
+        bin_means = [(bins[i]+bins[i+1])/2 for i in range(len(bins)-1)]
+        counts, bins = np.histogram(flux, bins)
+
+        popt, pcov = curve_fit(power_law, bin_means, counts)
+        print(f'Fit power law with index {popt[1]:.2f} and normalization {popt[0]:.2f}')
+
+        plt.bar(bin_means, counts, width=np.diff(bins), 
+                edgecolor='k', alpha=0.8, align='center', label='Data')
+        plt.plot(bins, power_law(bins, *popt), 
+                 label=f'$N \propto S^{{-{popt[1]:.2f}}}$', color='k')
+        plt.xscale('log')
+        plt.yscale('log')
+
+        plt.xlabel('Flux density')
+        plt.ylabel('Counts')
+        plt.legend()
+
+        plt.savefig(os.path.join(self.out_figures,
+                                 f'{self.cat_name}_flux_dist.png'), 
+                    dpi=300)
+        plt.close()
 
     def plot_poisson(self, counts, poisson_lambda):
         '''
@@ -322,115 +382,7 @@ class SkyData:
                     dpi=300)
         plt.close()
 
-def simulated_data(NSIDE, results_dir, flux_cut, snr_cut, fit_noise=False):
-    '''
-    Simulate a dataset and run likelihood
-    '''
-    sim_param_file = 'parsets/simulation.json'
-    with open(sim_param_file) as f:
-        sim_params = json.load(f)
-
-    sim_cat_file = os.path.join(results_dir,'catalog_simulation')
-    name = 'Simulation'
-
-    if os.path.exists(sim_cat_file+'.fits'):
-        sim_catalog = Table.read(sim_cat_file+'.fits')
-    else:
-        dipole_params = sim_params['dipole']
-        survey_params = sim_params['contiguous']
-
-        dipole = (dipole_params['beta'], dipole_params['ra'], dipole_params['dec'])
-
-        ra, dec = sim_obs.sample_uniform_sky(survey_params['N'])
-        ra_false, dec_false = sim_obs.sample_uniform_sky(int(survey_params['false_detection_frac']
-                                                             * survey_params['N']))
-
-        flux = sim_obs.sample_power_law_flux(survey_params['N'],
-                                         pow_norm=survey_params['pow_norm'],
-                                         pow_index=survey_params['pow_index'])
-        flux_false = sim_obs.sample_power_law_flux(int(survey_params['false_detection_frac']
-                                                       * survey_params['N']),
-                                               pow_norm=survey_params['pow_norm'],
-                                               pow_index=survey_params['pow_index'])
-
-        ra, dec, flux = sim_obs.apply_dipole(dipole, ra, dec, flux, survey_params['alpha'])
-
-        if survey_params['rms_variation'] == 'RACS':
-            path = Path(__file__).parent / 'parsets' / 'RACS.json'
-            with open(path) as infile:
-                racs_params = json.load(infile)[0]
-
-            # Get RMS noise from RACS
-            RACS_catalog = Table.read(racs_params['catalog']['path'])
-            RACS = SkyData(RACS_catalog, racs_params['catalog']['name'], **racs_params['columns'])
-            RACS.apply_cuts(**racs_params['cuts'])
-            median_rms = RACS.median_healpix_map(NSIDE)
-
-            theta, phi = helpers.RADECtoTHETAPHI(np.rad2deg(ra), np.rad2deg(dec))
-            pix = hp.ang2pix(NSIDE, theta, phi)
-            rms = median_rms[pix]
-
-            theta_false, phi_false = helpers.RADECtoTHETAPHI(np.rad2deg(ra_false), np.rad2deg(dec_false))
-            pix_false = hp.ang2pix(NSIDE, theta_false, phi_false)
-            rms_false = median_rms[pix_false]
-        else:
-            rms = survey_params['rms'] * (1 - survey_params['rms_variation']*np.cos(ra))
-        rms_noise = np.random.normal(0, rms)
-
-        sim_catalog = Table()
-        sim_catalog['ra'] = np.rad2deg(ra)
-        sim_catalog['dec'] = np.rad2deg(dec)
-        sim_catalog['intrinsic_flux'] = flux # mJy
-        sim_catalog['observed_flux'] = flux + rms_noise # mJy
-        sim_catalog['rms'] = rms
-
-        # False sources
-        if survey_params['false_detection_frac'] > 0:
-            false_catalog = Table()
-            false_catalog['ra'] = np.rad2deg(ra_false)
-            false_catalog['dec'] = np.rad2deg(dec_false)
-            false_catalog['intrinsic_flux'] = flux_false # mJy
-            false_catalog['observed_flux'] = flux_false # mJy
-            false_catalog['rms'] = rms_false
-
-            sim_catalog = vstack([sim_catalog, false_catalog])
-
-        # Retain only sources with 5 sigma
-        sim_catalog = sim_catalog[sim_catalog['rms'] != np.nan]
-        sim_catalog = sim_catalog[sim_catalog['observed_flux']/sim_catalog['rms'] > 5]
-        sim_catalog.write(sim_cat_file+'.fits')
-
-    dipole_amplitude = ( (2 + sim_params['contiguous']['pow_index'] 
-                        * (1 + sim_params['contiguous']['alpha'])) 
-                        * sim_params['dipole']['beta'] )
-
-    sim_data = SkyData(sim_catalog, catalog_name=name,
-                  ra_col='ra', dec_col='dec',
-                  flux_col='observed_flux', 
-                  peak_flux_col='observed_flux',
-                  rms_col='rms')
-
-    if fit_noise:
-        sim_data.apply_cuts(snr_cut=snr_cut)
-        sim_data.to_healpix_map(NSIDE)
-
-        median_rms = sim_data.median_healpix_map(NSIDE)
-        sim_data.show_map(median_rms, name='RMS')
-        sim_data.show_map(name='counts_nocut')
-
-        fit_sources = sim_data.hpx_map[~sim_data.hpx_mask]
-        median_rms = median_rms[~sim_data.hpx_mask]
-        sim_data.rms_power_law(median_rms, fit_sources, plot=True)
-
-        flux_cut = 0
-    else:
-        sim_data.apply_cuts(flux_cut=flux_cut)
-        sim_data.to_healpix_map(NSIDE)
-        sim_data.show_map()
-
-    return sim_data, flux_cut, dipole_amplitude
-
-def catalog_data(params, NSIDE, flux_cut, snr_cut, fit_noise=False):
+def catalog_data(params, NSIDE, flux_cut, snr_cut, extra_fit=False):
     '''
     Prepare catalog for a dipole measurement
     '''
@@ -439,10 +391,11 @@ def catalog_data(params, NSIDE, flux_cut, snr_cut, fit_noise=False):
     data.apply_cuts(**params['cuts'])
 
     # Additional cuts
-    for cut in params['additional_cuts']:
-        data.apply_additional_cuts(**cut)
+    if 'additional_cuts' in params:
+        for cut in params['additional_cuts']:
+            data.apply_additional_cuts(**cut)
 
-    if fit_noise:
+    if extra_fit == 'noise':
         data.apply_cuts(snr_cut=snr_cut)
         data.to_healpix_map(NSIDE)
 
@@ -456,5 +409,10 @@ def catalog_data(params, NSIDE, flux_cut, snr_cut, fit_noise=False):
 
         data.to_healpix_map(NSIDE)
         data.show_map()
+        data.flux_power_law()
+
+    if 'weights' in params:
+        data.apply_weights(params['weights'])
+        data.show_map(name='counts_weighted')
 
     return data, flux_cut

@@ -1,0 +1,27 @@
+[{
+	"catalog" : {
+		"name" : "Sim-sky",
+		"path" : "data/sim_sky.fit",
+		"default_flux_cut" : 15.0
+		},
+	"columns" : {
+		"ra_col" : "ra",
+		"dec_col" : "dec",
+		"flux_col" : "observed_flux",
+		"rms_col" : "rms"
+		},
+	"simulate" : {
+		"N" : 4e7,
+		"pow_norm" : 0.25,
+		"pow_index" : 1.0,
+		"alpha" : 0.75,
+		"rms_variation" : "RACS",
+		"rms" : 1,
+		"false_detection_frac" : 0.003
+	},
+	"dipole" : {
+		"beta" : 4e-3,
+		"ra" : 170,
+		"dec" : -10
+	}
+}]

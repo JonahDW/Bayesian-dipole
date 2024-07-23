@@ -14,17 +14,23 @@ This code has been used to produce the results in [Wagenveld et al. (2023)](http
 
 ## dipole_likelihood_poisson.py
 
-This is the only script that has to be run to perform inference on a given catalogue. Example usage:
+This is the only script that has to be run to perform inference on a given catalogue. The catalogue name(s) given must correspond to a json file in the `parsets` directory. This json file must contain the details about the catalogue(s), like the filename and column names, as well as any cuts in the data. Example usage:
 
 ```python dipole_likelihood_poisson.py NVSS --nside 32 --flux_cut 15```
 
-Which will read the catalogue details from `parsets/NVSS.json`, pixelises the catalogue using HEALPix with NSIDE=32, and cuts out all sources below a flux density of 15 mJy. Other more general catalogue cuts should be specified in the json file. 
+Which will read the catalogue details from `parsets/NVSS.json`, pixelises the catalogue using HEALPix with NSIDE=32, and cuts out all sources below a flux density of 15 mJy. Other more general catalogue cuts should be specified in the json file.
+
+If the json file contains multiple catalogues, the multi-catalogue estimator will be used. For an example of this see `parsets/NVSS-RACS.json`. If the json dictionary contains the `pointing_columns` key, the catalogue will be treated as containing a series of pointings and will not be discretised using HEALPix. For an example of this see `parsets/MALS.json`.
 
 ### Full list of arguments
 ```
 usage: dipole_likelihood_poisson.py [-h] [--nside NSIDE] [--flux_cut FLUX_CUT]
                                     [--snr_cut SNR_CUT]
-                                    [--results_dir RESULTS_DIR] [--fit_noise]
+                                    [--results_dir RESULTS_DIR]
+                                    [--extra_fit EXTRA_FIT]
+                                    [--fit_col FIT_COL]
+                                    [--completeness [COMPLETENESS]]
+                                    [--dipole_mode DIPOLE_MODE]
                                     [--keep_results]
                                     catalog_name
 
@@ -42,9 +48,30 @@ optional arguments:
   --snr_cut SNR_CUT     Lower S/N limit.
   --results_dir RESULTS_DIR
                         Directory where to store results
-  --fit_noise           Try to fit noise and counts with a power law
-                        (default=False).
+  --extra_fit EXTRA_FIT
+                        Fit additional relation to the data to model
+                        systematic effects. Current options are 'noise' and
+                        'linear' (default = no additional fit)
+  --fit_col FIT_COL     Which column in the catalogue to use for extra fit.
+  --completeness [COMPLETENESS]
+                        Use completeness when looking at number counts,
+                        provided a column which stores the completeness of
+                        each source in the catalog (default = do not use
+                        completeness).
+  --dipole_mode DIPOLE_MODE
+                        How to break down the dipole amplitude when fitting
+                        multiple catalogues. Default mode 'amplitude' fits for
+                        amplitude, 'velocity' fits velocity directly.
+                        'Combined' fits both, assuming separate velocity
+                        component and intrinsic dipole. Latter options require
+                        specification of spectral index and power law index of
+                        flux distribution (x) in json file
   --keep_results        Specify if you wish to keep results from the
                         estimator. If specified the script will only run the
                         diagnostic plots (default=False).
 ```
+## simulate_observations.py
+
+Create a simulated catalog. A catalogue with sources in pointings can be created by using the argument `pointings`, and a contiguous sky catalogue can be created using the the argument `sky`. The catalog parameters, including the injected dipole, can be adjusted in either `parsets/sim-pointings.json` or `parsets/sim-sky.json`. In case of pointings simulation, a catalogue of pointings must be specified which includes R.A., Dec., name and rms of each pointing. For a sky simulation, rms is currently constant but a HEALPix rms map will be available as input for local rms. Example usage:
+
+```python simulate_observations.py pointing```

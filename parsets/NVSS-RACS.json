@@ -1,8 +1,10 @@
 [{
 	"catalog" : {
-		"path" : "data/NVSS_CATALOG_INT.fit",
+		"path" : "data/nvss.fit",
 		"name" : "NVSS",
-		"default_flux_cut" : 15.0
+		"default_flux_cut" : 15.0,
+		"alpha" : 0.75,
+		"x" : 0.85
 		},
 	"columns" : {
 		"ra_col" : "RA(2000)",
@@ -12,16 +14,22 @@
 	"cuts" : {
 		"galactic_cut" : 7.0,
 		"mask_bright" : 2500,
-		"dec_low" : -40,
-		"dec_high" : 90,
-		"mask_file" : "nvss_mask.json"
-		}
+		"mask_file" : "nvss_mask.csv"
+		},
+	"additional_cuts" : [{ 
+		"col" : "DEC(2000)",
+		"low" : 0,
+		"high" : 90,
+		"include" : true
+		}]
 },
 {
 	"catalog" : {
-		"path" : "data/racs_galcut.fits",
+		"path" : "data/racs_low.fits",
 		"name" : "RACS",
-		"default_flux_cut" : 15.0
+		"default_flux_cut" : 15.0,
+		"alpha" : 0.88,
+		"x" : 0.82
 		},
 	"columns" : {
 		"ra_col" : "ra",
@@ -31,9 +39,14 @@
 		"peak_flux_col" : "peak_flux"
 		},
 	"cuts" : {
+		"galactic_cut" : 7.0,
 		"mask_bright" : 2500,
-		"dec_low" : -90,
-		"dec_high" : 40,
-		"mask_file" : "racs_mask.json"
-		}
+		"mask_file" : "racs_mask.csv"
+		},
+	"additional_cuts" : [{ 
+		"col" : "dec",
+		"low" : -90,
+	    "high" : 0,
+		"include" : true
+		}]
 }]

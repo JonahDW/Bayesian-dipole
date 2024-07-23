@@ -1,6 +1,6 @@
 [{
 	"catalog" : {
-		"path" : "data/NVSS_CATALOG_INT.fit",
+		"path" : "data/nvss.fit",
 		"name" : "NVSS",
 		"default_flux_cut" : 15.0
 		},
@@ -12,13 +12,13 @@
 	"cuts" : {
 		"galactic_cut" : 7.0,
 		"mask_bright" : 2500,
-		"mask_file" : "nvss_mask.json",
+		"mask_file" : "nvss_mask.csv",
 		"invert_mask_file" : false
 		},
 	"additional_cuts" : [{ 
 		"col" : "DEC(2000)",
 		"low" : -40,
-	    "high" : 90,
+		"high" : 90,
 		"include" : true
 		}]
 }]

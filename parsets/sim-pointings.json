@@ -1,0 +1,35 @@
+[{	
+    "catalog" : {
+        "name" : "Sim-pointings",
+		"path" : "data/sim_pointings.fits",
+		"pointings_path" : "data/mals-lwb-pointings.fits",
+		"default_flux_cut" : 3e-4
+		},
+	"columns" : {
+		"ra_col" : "ra",
+		"dec_col" : "dec",
+		"flux_col" : "observed_flux",
+		"rms_col" : "rms",
+		"pointing_col" : "pointing_name"
+		},
+	"pointing_columns" : {
+	    "pointing_col" : "source_id",
+		"ra_col" : "RA",
+		"dec_col" : "DEC",
+		"rms_col" : "sigma20"
+		},
+	"simulate" :{
+		"N" : 1e8,
+		"outer_radius": 1.5,
+		"inner_radius" : 1.1,
+		"pow_norm" : 1e-5,
+		"pow_index" : 1.0,
+		"alpha" : 0.75,
+		"rms" : "pointing"
+	},
+	"dipole" : {
+		"beta" : 4e-3,
+		"ra" : 170,
+		"dec" : -10
+	}
+}]
