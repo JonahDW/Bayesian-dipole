@@ -222,7 +222,7 @@ class SkyData:
         weights = hp.read_map(path)
         self.hpx_map = self.hpx_map / weights
 
-    def median_healpix_map(self, NSIDE):
+    def median_healpix_map(self, NSIDE, col):
         '''
         Make a HEALPix map of the RMS, taking the median for each cell
 
@@ -235,10 +235,7 @@ class SkyData:
                                                 return_counts=True)
 
         NPIX = hp.nside2npix(NSIDE)
-        hpx_map = np.array([np.nanmedian(self.catalog[self.rms_col][indices == i]) for i in range(NPIX)])
-
-        self.sigma_ref = np.nanmedian(hpx_map[~np.isnan(hpx_map)])
-        print(f'Median RMS value {self.sigma_ref} mJy/beam')
+        hpx_map = np.array([np.nanmedian(self.catalog[col][indices == i]) for i in range(NPIX)])
 
         return hpx_map
 
@@ -388,7 +385,10 @@ def catalog_data(params, NSIDE, flux_cut, snr_cut, extra_fit=False):
     '''
     catalog = Table.read(params['catalog']['path'])
     data = SkyData(catalog, params['catalog']['name'], **params['columns'])
-    data.apply_cuts(**params['cuts'])
+
+    # Apply standard cuts
+    if 'cuts' in params:
+        data.apply_cuts(**params['cuts'])
 
     # Additional cuts
     if 'additional_cuts' in params:
@@ -399,7 +399,10 @@ def catalog_data(params, NSIDE, flux_cut, snr_cut, extra_fit=False):
         data.apply_cuts(snr_cut=snr_cut)
         data.to_healpix_map(NSIDE)
 
-        rms = data.median_healpix_map(NSIDE)
+        rms = data.median_healpix_map(NSIDE, data.rms_col)
+        data.sigma_ref = np.nanmedian(rms[~np.isnan(rms)])
+        print(f'Median RMS value {data.sigma_ref} mJy/beam')
+
         data.show_map(rms, name='RMS')
         data.show_map(name='counts_nocut')
 

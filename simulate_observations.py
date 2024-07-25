@@ -202,82 +202,83 @@ def simulate_sky():
     print('Simulating a source catalogue')
     sim_param_file = Path(__file__).parent / 'parsets' / 'sim-sky.json'
     with open(sim_param_file) as f:
-        sim_params = json.load(f)
+        sim_params = json.load(f)[0]
+
+    # Define columns
+    ra_col   = sim_params['columns']['ra_col']
+    dec_col  = sim_params['columns']['dec_col']
+    rms_col  = sim_params['columns']['rms_col']
+    flux_col = sim_params['columns']['flux_col']
 
     dipole_params = sim_params['dipole']
     dipole = (dipole_params['beta'], dipole_params['ra'], dipole_params['dec'])
 
-    survey_params = sim_params['contiguous']
+    survey_params = sim_params['simulate']
 
     # Simulate sources
-    ra, dec = sample_uniform_sky(survey_params['N'])
-    flux = sample_power_law_flux(survey_params['N'],
-                                 pow_norm=survey_params['pow_norm'],
+    nsources = int(survey_params['N'])
+    ra, dec = sample_uniform_sky(nsources)
+    flux = sample_power_law_flux(nsources, pow_norm=survey_params['pow_norm'],
                                  pow_index=survey_params['pow_index'])
 
     # Simulate false detections
     if survey_params['false_detection_frac'] > 0:
-        ra_false, dec_false = sample_uniform_sky(int(survey_params['false_detection_frac']
-                                                             * survey_params['N']))
-        flux_false = sample_power_law_flux(int(survey_params['false_detection_frac']
-                                                       * survey_params['N']),
-                                               pow_norm=survey_params['pow_norm'],
-                                               pow_index=survey_params['pow_index'])
+        nsources_false = int(survey_params['false_detection_frac'] * survey_params['N'])
+        ra_false, dec_false = sample_uniform_sky(nsources_false)
+        flux_false = sample_power_law_flux(nsources_false, pow_norm=survey_params['pow_norm'],
+                                           pow_index=survey_params['pow_index'])
 
-    ra, dec, flux = sim_obs.apply_dipole(dipole, ra, dec, flux, survey_params['alpha'])
+    ra, dec, flux = apply_dipole(dipole, ra, dec, flux, survey_params['alpha'])
 
     # Define noise structure of the catalogue
-    if survey_params['rms_variation'] == 'RACS':
-        path = Path(__file__).parent / 'parsets' / 'RACS.json'
-        with open(path) as infile:
-            racs_params = json.load(infile)[0]
-
-        # Get RMS noise from RACS
-        RACS_catalog = Table.read(racs_params['catalog']['path'])
-        RACS = SkyData(RACS_catalog, racs_params['catalog']['name'], **racs_params['columns'])
-        RACS.apply_cuts(**racs_params['cuts'])
-        median_rms = RACS.median_healpix_map(NSIDE)
+    if isinstance(survey_params['rms'], float):
+        rms = [survey_params['rms']]*len(ra)
+    else:
+        # Assume input file is HEALPix map
+        path = Path(__file__).parent / survey_params['rms']
+        hpx_rms_map, header = hp.read_map(path, h=True)
+        header = dict(header)
+        NSIDE = header['NSIDE']
 
         theta, phi = helpers.RADECtoTHETAPHI(np.rad2deg(ra), np.rad2deg(dec))
         pix = hp.ang2pix(NSIDE, theta, phi)
-        rms = median_rms[pix]
+        rms = hpx_rms_map[pix]
 
         theta_false, phi_false = helpers.RADECtoTHETAPHI(np.rad2deg(ra_false), np.rad2deg(dec_false))
         pix_false = hp.ang2pix(NSIDE, theta_false, phi_false)
-        rms_false = median_rms[pix_false]
-    else:
-        rms = survey_params['rms'] * (1 - survey_params['rms_variation']*np.cos(ra))
+        rms_false = hpx_rms_map[pix_false]
+
     rms_noise = np.random.normal(0, rms)
 
     # Create catalogue
     sim_catalog = Table()
-    sim_catalog['ra'] = np.rad2deg(ra)
-    sim_catalog['dec'] = np.rad2deg(dec)
+    sim_catalog[ra_col]   = np.rad2deg(ra)
+    sim_catalog[dec_col]  = np.rad2deg(dec)
+    sim_catalog[flux_col] = flux + rms_noise # mJy
+    sim_catalog[rms_col]  = rms
     sim_catalog['intrinsic_flux'] = flux # mJy
-    sim_catalog['observed_flux'] = flux + rms_noise # mJy
-    sim_catalog['rms'] = rms
 
     # False sources
     if survey_params['false_detection_frac'] > 0:
         false_catalog = Table()
-        false_catalog['ra'] = np.rad2deg(ra_false)
-        false_catalog['dec'] = np.rad2deg(dec_false)
+        false_catalog[ra_col]   = np.rad2deg(ra_false)
+        false_catalog[dec_col]  = np.rad2deg(dec_false)
+        false_catalog[flux_col] = flux_false # mJy
+        false_catalog[rms_col]  = rms_false
         false_catalog['intrinsic_flux'] = flux_false # mJy
-        false_catalog['observed_flux'] = flux_false # mJy
-        false_catalog['rms'] = rms_false
 
         sim_catalog = vstack([sim_catalog, false_catalog])
 
     # Retain only sources with 5 sigma
-    sim_catalog = sim_catalog[sim_catalog['rms'] != np.nan]
-    sim_catalog = sim_catalog[sim_catalog['observed_flux']/sim_catalog['rms'] > 5]
+    sim_catalog = sim_catalog[sim_catalog[rms_col] != np.nan]
+    sim_catalog = sim_catalog[sim_catalog[flux_col]/sim_catalog[rms_col] > 5]
 
-    sim_param_file = Path(__file__).parent / 'data' / 'sim_sky'
-    print(f'Simulated catalogue written to {sim_param_file}.fits')
-    sim_catalog.write(sim_cat_file+'.fits')
+    sim_cat_file = Path(__file__).parent / 'data' / 'sim_sky'
+    print(f'Simulated catalogue written to {sim_cat_file}.fits')
+    sim_catalog.write(str(sim_cat_file)+'.fits', overwrite=True)
 
-    dipole_amplitude = ( (2 + sim_params['contiguous']['pow_index'] 
-                        * (1 + sim_params['contiguous']['alpha'])) 
+    dipole_amplitude = ( (2 + sim_params['simulate']['pow_index'] 
+                        * (1 + sim_params['simulate']['alpha'])) 
                         * sim_params['dipole']['beta'] )
     print(f'Expected measured dipole amplitude: {dipole_amplitude}')
 

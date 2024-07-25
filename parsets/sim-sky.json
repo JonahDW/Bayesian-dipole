@@ -1,7 +1,7 @@
 [{
 	"catalog" : {
 		"name" : "Sim-sky",
-		"path" : "data/sim_sky.fit",
+		"path" : "data/sim_sky.fits",
 		"default_flux_cut" : 15.0
 		},
 	"columns" : {
@@ -15,8 +15,7 @@
 		"pow_norm" : 0.25,
 		"pow_index" : 1.0,
 		"alpha" : 0.75,
-		"rms_variation" : "RACS",
-		"rms" : 1,
+		"rms" : "data/racs_rms_hpx.fits",
 		"false_detection_frac" : 0.003
 	},
 	"dipole" : {
