@@ -1,4 +1,4 @@
-# Bayesian-dipole [![DOI](https://zenodo.org/badge/644438254.svg)](https://zenodo.org/badge/latestdoi/644438254)
+# Bayesian-dipole [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7962922.svg)](https://doi.org/10.5281/zenodo.7962922)
 
 The purpose of this module is to estimate parameters of the cosmic number count dipole from catalogues of (radio) sources using Bayesian methods. Catalogues are pixelised using the python implementation of HEALPix, [healpy](https://healpy.readthedocs.io/en/latest/). The software used for Bayesian inference is [bilby](https://lscsoft.docs.ligo.org/bilby/installation.html), which can wrap around a range of different samplers. These scripts use [emcee](https://emcee.readthedocs.io/en/stable/) for sampling.
 
@@ -7,7 +7,7 @@ Setup for any given catalogue (or set of catalogues!) is defined in a json file 
 If you use this code and wish to cite it, you can do so as follows:
 
 ```
-Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference v0.1, Zenodo, DOI: 10.5281/zenodo.7962923
+Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference, Zenodo, DOI: 10.5281/zenodo.7962922
 ```
 
 This code has been used to produce the results in [Wagenveld et al. (2023)](https://arxiv.org/abs/2305.15335). The catalogues that were used are the [NVSS](https://www.cv.nrao.edu/nvss/) and [RACS](https://research.csiro.au/casda/the-rapid-askap-continuum-survey-stokes-i-source-catalogue-data-release-1/) catalogues. 

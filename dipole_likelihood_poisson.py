@@ -77,13 +77,23 @@ def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
         if completeness is not None:
             label += '_'+completeness
 
-        fit_vals = catalog.pointings[fit_col]
+        # Get values to fit linear relation to
+        if catalog.NSIDE is not None:
+            if fit_col in catalog.hpx_table.colnames:
+                fit_vals = catalog.hpx_table[fit_col]
+            elif fit_col in catalog.catalog.colnames:
+                print(f'Creating median HEALPix map of {fit_col}')
+                fit_vals = catalog.median_healpix_map(catalog.NSIDE, fit_col)
+            else:
+                print(f'Specified fit column, {fit_col}, not found')
+                sys.exit()
+            fit_vals = fit_vals[~catalog.hpx_mask]
+        else:
+            fit_vals = catalog.pointings[fit_col]
         max_val = np.max(np.abs(fit_vals))
 
-        priors['lambda'] = bilby.core.prior.Uniform(0, 2*mean_counts,
-                                                    '$\\lambda$')
-        priors['lin_amp'] = bilby.core.prior.Uniform(-1/max_val,
-                                                     1/max_val,'$a$')
+        priors['lambda'] = bilby.core.prior.Uniform(0, 2*mean_counts, '$\\lambda$')
+        priors['lin_amp'] = bilby.core.prior.Uniform(-1/max_val, 1/max_val,'$a$')
 
         injection_parameters['lambda'] = mean_counts
         injection_parameters['lin_amp'] = 0
@@ -131,12 +141,12 @@ def estimate_multi_dipole(catalogs, priors, injection_parameters,
     '''
     Estimate the dipole for multiple catalogs
     '''
-    all_obs = []
-    all_pix = []
+    x         = []
+    alpha     = []
+    all_obs   = []
+    all_pix   = []
+    NSIDES    = []
     cat_names = []
-    NSIDES = []
-    alpha = []
-    x = []
     for i, catalog in enumerate(catalogs):
         cat_obs = catalog.hpx_map[~catalog.hpx_mask]
         cat_pix = catalog.hpx_mask

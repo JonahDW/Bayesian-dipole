@@ -24,6 +24,7 @@ class SkyData:
                  rms_col=None, peak_flux_col=None):
         self.catalog = catalog
         self.cat_name = catalog_name
+        self.total_sources = len(catalog)
 
         self.ra_col = ra_col
         self.dec_col = dec_col
@@ -43,13 +44,15 @@ class SkyData:
         self.catalog['l'] = np.rad2deg(l)
         self.catalog['b'] = np.rad2deg(b)
 
+        # HEALPix variables and table
         self.NSIDE = None
         self.hpx_map = None
         self.hpx_mask = None
         self.user_mask = None
-        self.sigma_ref = None
-        self.total_sources = len(catalog)
+        self.hpx_table = Table()
 
+        # Other variables
+        self.sigma_ref = None
         self.alpha = None
         self.x = None
 
@@ -210,6 +213,30 @@ class SkyData:
             self.hpx_mask = np.logical_or(self.hpx_mask, self.user_mask)
             self.hpx_map[self.hpx_mask] = 0
 
+        # Create HEALPix table entries
+        self.hpx_table['idx'] = np.arange(NPIX)
+        self.hpx_table['count'] = self.hpx_map
+        self.hpx_table['masked'] = self.hpx_mask
+
+        theta, phi = hp.pix2ang(self.NSIDE, np.arange(NPIX))
+        ra, dec = helpers.THETAPHItoRADEC(theta, phi)
+        self.hpx_table['ra'] = ra
+        self.hpx_table['dec'] = dec
+
+        ra_rad  = np.deg2rad(ra)
+        dec_rad = np.deg2rad(dec)
+        # Get galactic and ecliptic coordinates
+        l, b       = helpers.equatorial_to_galactic(ra_rad, dec_rad)
+        elon, elat = helpers.transform_spherical_coordinate_system(3*np.pi/2.,
+                                                                   np.deg2rad(23.439),
+                                                                   0., ra_rad, dec_rad)
+        self.hpx_table['l'] = np.rad2deg(l)
+        self.hpx_table['b'] = np.rad2deg(b)
+        self.hpx_table['elon'] = np.rad2deg(elon)
+        self.hpx_table['elat'] = np.rad2deg(elat)
+        # Need this for CatWISE fits
+        self.hpx_table['abs_elat'] = np.abs(np.rad2deg(elat))
+
         print(f'--- Catalog {self.cat_name} discretized into healpix map with NSIDE {NSIDE} ---')
         print(f'Number of sources after mapping is {int(np.sum(self.hpx_map))}')
         self.total_sources = int(np.sum(self.hpx_map))
@@ -224,10 +251,11 @@ class SkyData:
 
     def median_healpix_map(self, NSIDE, col):
         '''
-        Make a HEALPix map of the RMS, taking the median for each cell
+        Make a HEALPix map of some column, taking the median for each cell
 
         Keyword arguments:
-        NSIDE (int)       -- Resolution of HEALPix map
+        NSIDE (int) -- Resolution of HEALPix map
+        col (str)   -- Name of the table column to take value from
         '''
         indices = hp.ang2pix(NSIDE, self.catalog['theta'], self.catalog['phi'])
         idx, inverse, number_counts  = np.unique(indices, 
@@ -236,6 +264,9 @@ class SkyData:
 
         NPIX = hp.nside2npix(NSIDE)
         hpx_map = np.array([np.nanmedian(self.catalog[col][indices == i]) for i in range(NPIX)])
+
+        # Add result to HEALPix table as well
+        self.hpx_table[col] = hpx_map
 
         return hpx_map
 
