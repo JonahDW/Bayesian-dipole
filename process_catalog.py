@@ -228,7 +228,7 @@ class SkyData:
         # Get galactic and ecliptic coordinates
         l, b       = helpers.equatorial_to_galactic(ra_rad, dec_rad)
         elon, elat = helpers.transform_spherical_coordinate_system(3*np.pi/2.,
-                                                                   np.deg2rad(23.439),
+                                                                   np.deg2rad(90-23.439),
                                                                    0., ra_rad, dec_rad)
         self.hpx_table['l'] = np.rad2deg(l)
         self.hpx_table['b'] = np.rad2deg(b)

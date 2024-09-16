@@ -10,7 +10,7 @@ If you use this code and wish to cite it, you can do so as follows:
 Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference, Zenodo, DOI: 10.5281/zenodo.7962922
 ```
 
-This code has been used to produce the results in [Wagenveld et al. (2023)](https://arxiv.org/abs/2305.15335). The catalogues that were used are the [NVSS](https://www.cv.nrao.edu/nvss/) and [RACS](https://research.csiro.au/casda/the-rapid-askap-continuum-survey-stokes-i-source-catalogue-data-release-1/) catalogues. 
+This code has been used to produce the results in [Wagenveld et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023A%26A...675A..72W/abstract), in which the [NVSS](https://www.cv.nrao.edu/nvss/) and [RACS](https://research.csiro.au/casda/the-rapid-askap-continuum-survey-stokes-i-source-catalogue-data-release-1/) catalogues were used. In [Wagenveld et al. (2024)](https://ui.adsabs.harvard.edu/abs/2024arXiv240816619W/abstract), this software was used on the [MALS DR2](https://mals.iucaa.in/releases) catalogue. 
 
 ## dipole_likelihood_poisson.py
 
@@ -72,6 +72,6 @@ optional arguments:
 ```
 ## simulate_observations.py
 
-Create a simulated catalog. A catalogue with sources in pointings can be created by using the argument `pointings`, and a contiguous sky catalogue can be created using the the argument `sky`. The catalog parameters, including the injected dipole, can be adjusted in either `parsets/sim-pointings.json` or `parsets/sim-sky.json`. In case of pointings simulation, a catalogue of pointings must be specified which includes R.A., Dec., name and rms of each pointing. For a sky simulation, rms is currently constant but a HEALPix rms map will be available as input for local rms. Example usage:
+Create a simulated catalog. A catalogue with sources in pointings can be created by using the argument `pointings`, and a contiguous sky catalogue can be created using the the argument `sky`. The catalog parameters, including the injected dipole, can be adjusted in either `parsets/sim-pointings.json` or `parsets/sim-sky.json`. In case of pointings simulation, a catalogue of pointings must be specified which includes R.A., Dec., name and rms of each pointing. For a sky simulation, rms can be constant, or a specified HEALPix rms map as input for local rms. Example usage:
 
 ```python simulate_observations.py pointing```

@@ -1,6 +1,6 @@
 [{
 	"catalog" : {
-		"path" : "data/nvss.fit",
+		"path" : "data/nvss-2mrs.fits",
 		"name" : "NVSS",
 		"default_flux_cut" : 15.0,
 		"alpha" : 0.75,
@@ -25,7 +25,7 @@
 },
 {
 	"catalog" : {
-		"path" : "data/racs_low.fits",
+		"path" : "data/racs-2mrs.fits",
 		"name" : "RACS",
 		"default_flux_cut" : 15.0,
 		"alpha" : 0.88,

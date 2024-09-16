@@ -18,10 +18,11 @@ import process_pointings as point
 def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
                     completeness, results_dir, flux_cut, snr_cut, clean):
     '''
-    Estimate the dipole
+    Estimate the dipole with a single catalogue
     '''
     label = f'{catalog.cat_name}'
     if catalog.NSIDE is not None:
+        label += f'_NSIDE{catalog.NSIDE}'
         obs = catalog.hpx_map[~catalog.hpx_mask]
         pix = catalog.hpx_mask
 
@@ -185,10 +186,16 @@ def estimate_multi_dipole(catalogs, priors, injection_parameters,
         likelihood = MultiPoissonCombinedLikelihood(all_obs, all_pix, 
                                                     alpha, x, NSIDES)
 
+    if dipole_mode.lower() == 'combined-dir':
+        results_label += '_combined-dir'
+        ndim += 3
+        likelihood = MultiPoissonCombinedDirLikelihood(all_obs, all_pix,
+                                                       alpha, x, NSIDES)
+
     result = bilby.run_sampler(likelihood=likelihood,
                                priors=priors,
                                sampler='emcee',
-                               nwalkers=3*ndim,
+                               nwalkers=5*ndim,
                                ndim=ndim,
                                iterations=5000,
                                injection_parameters=injection_parameters,
@@ -278,11 +285,21 @@ def main():
         priors['beta'] = bilby.core.prior.Uniform(0,0.05,'$\\beta$')
         injection_parameters['amp'] = 4.5e-3
         injection_parameters['beta'] = 1.23e-3
+    if dipole_mode.lower() == 'combined-dir':
+        priors['amp'] = bilby.core.prior.Uniform(0,0.5,'$\\mathcal{D}$')
+        priors['beta'] = bilby.core.prior.Uniform(0,0.05,'$\\beta$')
+        priors['vel_ra'] = bilby.core.prior.Uniform(0,360.,'vel RA')
+        priors['vel_dec'] = CosineDeg(-90.,90.,'vel DEC')
+
+        injection_parameters['amp'] = 4.5e-3
+        injection_parameters['beta'] = 1.23e-3
+        injection_parameters['vel_ra'] = 168.
+        injection_parameters['vel_dec'] = -7.
 
     priors['dipole_ra'] = bilby.core.prior.Uniform(0,360.,'RA')
     priors['dipole_dec'] = CosineDeg(-90.,90.,'DEC')
 
-    injection_parameters['dipole_ra'] = 168.
+    injection_parameters['dipole_ra'] = 140.
     injection_parameters['dipole_dec'] = -7.
 
     catalogs = []

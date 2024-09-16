@@ -346,3 +346,74 @@ class MultiPoissonCombinedLikelihood(bilby.Likelihood):
                       - np.sum(gammaln(obs+1)))
 
         return lnl
+
+class MultiPoissonCombinedDirLikelihood(bilby.Likelihood):
+
+    def __init__(self, all_obs, all_cells, alpha, x, NSIDES=None):
+        '''
+        Poisson likelihood of a dipole with some amplitude and direction
+        for multiple catalogues
+
+        Keyword arguments:
+        all_obs (list of arrays)   -- Observations of number of galaxies per 
+                                      healpix pixel, per catalog
+        all_cells (list of arrays) -- Pixels indices per catalog
+        NSIDEs (list of ints)      -- Resolutions of the healpix maps
+        '''
+        parameters = {'beta': None, 'vel_ra': None, 'vel_dec': None,
+                      'amp': None, 'dipole_ra': None, 'dipole_dec': None}
+        for i in range(len(all_obs)):
+            parameters[f'lambda_{i}'] = None
+
+        super().__init__(parameters)
+        self.all_obs = all_obs
+        self.all_cells = all_cells
+        self.alpha = alpha
+        self.x = x
+        self.NSIDES = NSIDES
+
+    def log_likelihood(self):
+        beta = self.parameters['beta']
+        vel_ra = self.parameters['vel_ra']
+        vel_dec = self.parameters['vel_dec']
+
+        amp = self.parameters['amp']
+        dipole_ra = self.parameters['dipole_ra']
+        dipole_dec = self.parameters['dipole_dec']
+
+        # Create velocity dipole
+        vel_theta, vel_phi = helpers.RADECtoTHETAPHI(vel_ra, vel_dec)
+        velocity_direction = hp.ang2vec(vel_theta, vel_phi)
+
+        # Create intrinsic dipole
+        dipole_theta, dipole_phi = helpers.RADECtoTHETAPHI(dipole_ra, dipole_dec)
+        dipole_direction = hp.ang2vec(dipole_theta, dipole_phi)
+
+        # Calculate log likelihood for different datasets
+        lnl = 0
+        for i, obs in enumerate(self.all_obs):
+            kin_amp = (2 + self.x[i]*(1+self.alpha[i]))*beta
+
+            if self.NSIDES[i] is None:
+                pointings_theta, pointings_phi = self.all_cells[i]
+                kin_dipole = helpers.make_dipole_discrete(pointings_theta,
+                                                          pointings_phi,
+                                                          kin_amp, velocity_direction)
+                int_dipole = helpers.make_dipole_discrete(pointings_theta,
+                                                          pointings_phi,
+                                                          amp, dipole_direction)
+                dipole_model = kin_dipole + int_dipole - 1
+
+            else:
+                kin_dipole = helpers.make_dipole_healpix(self.NSIDES[i], kin_amp,
+                                                         velocity_direction)
+                int_dipole = helpers.make_dipole_healpix(self.NSIDES[i], amp,
+                                                         dipole_direction)
+                dipole_model = kin_dipole[~self.all_cells[i]] + int_dipole[~self.all_cells[i]] - 1
+
+            mean_counts = self.parameters[f'lambda_{i}']
+            lnl  +=  (- np.sum(mean_counts*dipole_model) 
+                      + np.sum(obs*np.log(mean_counts*dipole_model)) 
+                      - np.sum(gammaln(obs+1)))
+
+        return lnl
