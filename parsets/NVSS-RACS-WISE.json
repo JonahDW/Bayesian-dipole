@@ -1,0 +1,71 @@
+[{
+	"catalog" : {
+		"path" : "data/nvss-2mrs_z0.1.fits",
+		"name" : "NVSS",
+		"default_flux_cut" : 15.0,
+		"alpha" : 0.75,
+		"x" : 0.74
+		},
+	"columns" : {
+		"ra_col" : "RA(2000)",
+		"dec_col" : "DEC(2000)",
+		"flux_col" : "S1.4"
+		},
+	"cuts" : {
+		"galactic_cut" : 7.0,
+		"mask_bright" : 2500,
+		"mask_file" : "nvss_mask.csv"
+		},
+	"additional_cuts" : [{ 
+		"col" : "DEC(2000)",
+		"low" : 0,
+		"high" : 90,
+		"include" : true
+		}]
+},
+{
+	"catalog" : {
+		"path" : "data/racs-2mrs_z0.1.fits",
+		"name" : "RACS",
+		"default_flux_cut" : 15.0,
+		"alpha" : 0.88,
+		"x" : 0.72
+		},
+	"columns" : {
+		"ra_col" : "ra",
+		"dec_col" : "dec",
+		"flux_col" : "total_flux_source",
+		"rms_col" : "noise",
+		"peak_flux_col" : "peak_flux"
+		},
+	"cuts" : {
+		"galactic_cut" : 7.0,
+		"mask_bright" : 2500,
+		"mask_file" : "racs_mask.csv"
+		},
+	"additional_cuts" : [{ 
+		"col" : "dec",
+		"low" : -90,
+	    "high" : 0,
+		"include" : true
+		}]
+},
+{
+	"catalog" : {
+		"path" : "data/catwise-reduced.fits",
+		"name" : "WISE",
+		"default_flux_cut" : 0.078,
+		"alpha" : 1.07,
+		"x" : 1.90
+		},
+	"columns" : {
+		"ra_col" : "ra",
+		"dec_col" : "dec",
+		"flux_col" : "S"
+		},
+	"cuts" : {
+		"galactic_cut" : 30.0,
+		"mask_file" : "wise_mask.csv"
+		},
+	"weights": "wise_weights.fits"
+}]

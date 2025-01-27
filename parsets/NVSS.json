@@ -1,6 +1,6 @@
 [{
 	"catalog" : {
-		"path" : "data/nvss.fit",
+		"path" : "data/nvss.fits",
 		"name" : "NVSS",
 		"default_flux_cut" : 15.0
 		},
