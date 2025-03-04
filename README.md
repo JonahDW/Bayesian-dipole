@@ -20,7 +20,9 @@ This is the only script that has to be run to perform inference on a given catal
 
 Which will read the catalogue details from `parsets/NVSS.json`, pixelises the catalogue using HEALPix with NSIDE=32, and cuts out all sources below a flux density of 15 mJy. Other more general catalogue cuts should be specified in the json file.
 
-If the json file contains multiple catalogues, the multi-catalogue estimator will be used. For an example of this see `parsets/NVSS-RACS.json`. If the json dictionary contains the `pointing_columns` key, the catalogue will be treated as containing a series of pointings and will not be discretised using HEALPix. For an example of this see `parsets/MALS.json`.
+If the json file contains multiple catalogues, the multi-catalogue estimator will be used. In this case the `dipole_mode` argument can be used to determine what kind of dipole model is assumed. In this case, if any velocity component is fit, the determined alpha and x will need to be included in the parameter file. For an example of this, see `parsets/NVSS-RACS-WISE.json`.
+
+If the json dictionary contains the `pointing_columns` key, the catalogue will be treated as containing a series of pointings and will not be discretised using HEALPix. For an example of this see `parsets/MALS.json`.
 
 ### Full list of arguments
 ```
