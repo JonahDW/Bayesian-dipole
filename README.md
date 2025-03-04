@@ -1,20 +1,13 @@
-# Bayesian-dipole [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7962922.svg)](https://doi.org/10.5281/zenodo.7962922)
+<div align="center">
+# Bayesian-dipole 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7962922.svg)](https://doi.org/10.5281/zenodo.7962922)
+</div>
 
 The purpose of this module is to estimate parameters of the cosmic number count dipole from catalogues of (radio) sources using Bayesian methods. Catalogues are pixelised using the python implementation of HEALPix, [healpy](https://healpy.readthedocs.io/en/latest/). The software used for Bayesian inference is [bilby](https://lscsoft.docs.ligo.org/bilby/installation.html), which can wrap around a range of different samplers. These scripts use [emcee](https://emcee.readthedocs.io/en/stable/) for sampling.
 
-Setup for any given catalogue (or set of catalogues!) is defined in a json file in the `parsets` directory, several examples are already present. The name of the json file (without the extension) is then given to the program. Alternatively, the program can be called with the argument `SIM`, in which case a catalogue is simulated using the parameters specified in `parsets/simulation.json`.
-
-If you use this code and wish to cite it, you can do so as follows:
-
-```
-Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference, Zenodo, DOI: 10.5281/zenodo.7962922
-```
-
-This code has been used to produce the results in [Wagenveld et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023A%26A...675A..72W/abstract), in which the [NVSS](https://www.cv.nrao.edu/nvss/) and [RACS](https://research.csiro.au/casda/the-rapid-askap-continuum-survey-stokes-i-source-catalogue-data-release-1/) catalogues were used. In [Wagenveld et al. (2024)](https://ui.adsabs.harvard.edu/abs/2024arXiv240816619W/abstract), this software was used on the [MALS DR2](https://mals.iucaa.in/releases) catalogue. 
-
 ## dipole_likelihood_poisson.py
 
-This is the only script that has to be run to perform inference on a given catalogue. The catalogue name(s) given must correspond to a json file in the `parsets` directory. This json file must contain the details about the catalogue(s), like the filename and column names, as well as any cuts in the data. Example usage:
+Script to be run to perform inference on a given catalogue or set of catalogues. The setup for any given catalogue (or set of catalogues) is defined in a json file in the `parsets` directory, several examples are already present. The name of the json file (without the extension) is given as input. This json file must contain the details about the catalogue(s), like the filename and column names, as well as any cuts in the data. Example usage:
 
 ```python dipole_likelihood_poisson.py NVSS --nside 32 --flux_cut 15```
 
@@ -77,3 +70,13 @@ optional arguments:
 Create a simulated catalog. A catalogue with sources in pointings can be created by using the argument `pointings`, and a contiguous sky catalogue can be created using the the argument `sky`. The catalog parameters, including the injected dipole, can be adjusted in either `parsets/sim-pointings.json` or `parsets/sim-sky.json`. In case of pointings simulation, a catalogue of pointings must be specified which includes R.A., Dec., name and rms of each pointing. For a sky simulation, rms can be constant, or a specified HEALPix rms map as input for local rms. Example usage:
 
 ```python simulate_observations.py pointing```
+
+## Citation and relevant papers
+
+If you use this code and wish to cite it, you can do so as follows:
+
+```
+Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference, Zenodo, DOI: 10.5281/zenodo.7962922
+```
+
+This code has been used to produce the results in [Wagenveld et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023A%26A...675A..72W/abstract), in which the [NVSS](https://www.cv.nrao.edu/nvss/) and [RACS-low](https://research.csiro.au/casda/the-rapid-askap-continuum-survey-stokes-i-source-catalogue-data-release-1/) catalogues were used. In [Wagenveld et al. (2024)](https://ui.adsabs.harvard.edu/abs/2024arXiv240816619W/abstract), this software was used on the [MALS DR2](https://mals.iucaa.in/releases) catalogue. 
