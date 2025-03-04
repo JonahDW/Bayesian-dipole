@@ -287,9 +287,9 @@ def main():
         injection_parameters['beta'] = 1.23e-3
     if dipole_mode.lower() == 'combined-dir':
         priors['amp'] = bilby.core.prior.Uniform(0,0.5,'$\\mathcal{D}$')
-        priors['beta'] = 1.23e-3 #bilby.core.prior.Uniform(0,0.05,'$\\beta$')
-        priors['vel_ra'] = 168. #bilby.core.prior.Uniform(0,360.,'vel RA')
-        priors['vel_dec'] = -7. #CosineDeg(-90.,90.,'vel DEC')
+        priors['beta'] = bilby.core.prior.Uniform(0,0.05,'$\\beta$')
+        priors['vel_ra'] = bilby.core.prior.Uniform(0,360.,'vel RA')
+        priors['vel_dec'] = CosineDeg(-90.,90.,'vel DEC')
 
         injection_parameters['amp'] = 4.5e-3
         injection_parameters['beta'] = 1.23e-3
