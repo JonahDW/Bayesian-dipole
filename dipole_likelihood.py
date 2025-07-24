@@ -11,9 +11,10 @@ from argparse import ArgumentParser
 import bilby
 import corner
 
-from bilby_likelihoods import *
-import process_catalog as cat
-import process_pointings as point
+from utils import likelihoods
+from utils import priors as cpriors
+from utils import process_catalog as cat
+from utils import process_pointings as point
 
 def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
                     completeness, results_dir, flux_cut, snr_cut, clean):
@@ -53,25 +54,15 @@ def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
 
         pow_norm, pow_index = catalog.rms_power_law(rms, obs, plot=True)
 
-        priors['rms_amp'] = bilby.core.prior.Uniform(0,2*pow_norm,
-                                                     '$\\mathcal{M}$')
+        priors['rms_amp'] = bilby.core.prior.Uniform(0,2*pow_norm,'$\\mathcal{M}$')
         priors['rms_pow'] = bilby.core.prior.Uniform(0,3,'x')
         injection_parameters['rms_amp'] = pow_norm
         injection_parameters['rms_pow'] = pow_index
 
-        likelihood = PoissonRMSLikelihood(obs, rms, pix, 
-                                          catalog.sigma_ref, 
-                                          catalog.NSIDE)
-        result = bilby.run_sampler(likelihood=likelihood,
-                                   priors=priors,
-                                   sampler='emcee',
-                                   nwalkers=15,
-                                   ndim=5,
-                                   iterations=5000,
-                                   injection_parameters=injection_parameters,
-                                   outdir=results_dir,
-                                   label=label,
-                                   clean=clean)
+        ndim = 5
+        likelihood = likelihoods.PoissonRMSLikelihood(obs, rms, pix, 
+                                                      catalog.sigma_ref, 
+                                                      catalog.NSIDE)
 
     elif extra_fit == 'linear':
         label += f'_fluxcut{flux_cut:g}_linear_{fit_col}'
@@ -93,24 +84,32 @@ def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
             fit_vals = catalog.pointings[fit_col]
         max_val = np.max(np.abs(fit_vals))
 
-        priors['lambda'] = bilby.core.prior.Uniform(0, 2*mean_counts, '$\\lambda$')
+        priors['monopole'] = bilby.core.prior.Uniform(0, 2*mean_counts,'$\\mathcal{M}$')
         priors['lin_amp'] = bilby.core.prior.Uniform(-1/max_val, 1/max_val,'$a$')
 
-        injection_parameters['lambda'] = mean_counts
+        injection_parameters['monopole'] = mean_counts
         injection_parameters['lin_amp'] = 0
 
-        likelihood = PoissonLinearLikelihood(obs, fit_vals, 
-                                             pix, catalog.NSIDE)
-        result = bilby.run_sampler(likelihood=likelihood,
-                                   priors=priors,
-                                   sampler='emcee',
-                                   nwalkers=15,
-                                   ndim=5,
-                                   iterations=5000,
-                                   injection_parameters=injection_parameters,
-                                   outdir=results_dir,
-                                   label=label,
-                                   clean=clean)
+        ndim = 5
+        likelihood = likelihoods.PoissonLinearLikelihood(obs, fit_vals, pix, catalog.NSIDE)
+
+    elif extra_fit == 'dipole':
+        label += f'_fluxcut{flux_cut:g}_doubledipole'
+        if completeness is not None:
+            label += '_'+completeness
+
+        priors['monopole'] = bilby.core.prior.Uniform(0, 2*mean_counts,'$\\mathcal{M}$')
+        priors['amp2'] = bilby.core.prior.Uniform(0,1,'$\\mathcal{D}_{extra}$')
+        priors['dipole2_ra'] = bilby.core.prior.Uniform(0,360.,'$RA_{extra}$')
+        priors['dipole2_dec'] = cpriors.CosineDeg(-90.,90.,'$DEC_{extra}$')
+
+        injection_parameters['monopole'] = mean_counts
+        injection_parameters['amp2'] = 4.5e-4
+        injection_parameters['dipole2_ra'] = 0.0
+        injection_parameters['dipole2_dec'] = 0.0
+
+        ndim = 7
+        likelihood = likelihoods.PoissonDoubleDipoleLikelihood(obs, pix, catalog.NSIDE)
 
     else:
         label += f'_fluxcut{flux_cut:g}'
@@ -119,21 +118,23 @@ def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
 
         catalog.plot_poisson(obs, mean_counts)
 
-        priors['lambda'] = bilby.core.prior.Uniform(0, 2*mean_counts,
-                                                    '$\\lambda$')
-        injection_parameters['lambda'] = mean_counts
+        priors['monopole'] = bilby.core.prior.Uniform(0, 2*mean_counts, '$\\mathcal{M}$')
+        injection_parameters['monopole'] = mean_counts
 
-        likelihood = PoissonLikelihood(obs, pix, catalog.NSIDE)
-        result = bilby.run_sampler(likelihood=likelihood,
-                                   priors=priors,
-                                   sampler='emcee',
-                                   nwalkers=10,
-                                   ndim=4,
-                                   iterations=5000,
-                                   injection_parameters=injection_parameters,
-                                   outdir=results_dir,
-                                   label=label,
-                                   clean=clean)
+        ndim = 4
+        likelihood = likelihoods.PoissonLikelihood(obs, pix, catalog.NSIDE)
+
+    result = bilby.run_sampler(likelihood=likelihood,
+                               priors=priors,
+                               sampler='emcee',
+                               nwalkers=5*ndim,
+                               ndim=ndim,
+                               iterations=5000,
+                               injection_parameters=injection_parameters,
+                               outdir=results_dir,
+                               label=label,
+                               clean=clean)
+
 
     return result
 
@@ -157,9 +158,9 @@ def estimate_multi_dipole(catalogs, priors, injection_parameters,
         print(f'Mean sources per pixel {np.mean(cat_obs)} in {len(cat_obs)} pixels')
 
         mean_counts = np.mean(cat_obs)
-        priors[f'lambda_{i}'] = bilby.core.prior.Uniform(0, 2*mean_counts, 
-                                                         f'$\\lambda_{i}$')
-        injection_parameters[f'lambda_{i}'] = mean_counts
+        priors[f'monopole_{i}'] = bilby.core.prior.Uniform(0, 2*mean_counts, 
+                                                         f'$\\mathcal{{M}}_{i}$')
+        injection_parameters[f'monopole_{i}'] = mean_counts
 
         all_obs.append(cat_obs)
         all_pix.append(cat_pix)
@@ -289,7 +290,7 @@ def main():
         priors['amp'] = bilby.core.prior.Uniform(0,0.5,'$\\mathcal{D}$')
         priors['beta'] = bilby.core.prior.Uniform(0,0.05,'$\\beta$')
         priors['vel_ra'] = bilby.core.prior.Uniform(0,360.,'vel RA')
-        priors['vel_dec'] = CosineDeg(-90.,90.,'vel DEC')
+        priors['vel_dec'] = cpriors.CosineDeg(-90.,90.,'vel DEC')
 
         injection_parameters['amp'] = 4.5e-3
         injection_parameters['beta'] = 1.23e-3
@@ -297,7 +298,7 @@ def main():
         injection_parameters['vel_dec'] = -7.
 
     priors['dipole_ra'] = bilby.core.prior.Uniform(0,360.,'RA')
-    priors['dipole_dec'] = CosineDeg(-90.,90.,'DEC')
+    priors['dipole_dec'] = cpriors.CosineDeg(-90.,90.,'DEC')
 
     injection_parameters['dipole_ra'] = 140.
     injection_parameters['dipole_dec'] = -7.

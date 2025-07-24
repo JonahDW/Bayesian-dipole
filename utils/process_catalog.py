@@ -9,14 +9,14 @@ import healpy as hp
 from healpy.newvisufunc import projview
 import matplotlib.pyplot as plt
 
-from scipy.optimize import curve_fit
 from scipy.stats import poisson
+from scipy.optimize import curve_fit
 
 import astropy.units as u
 from astropy.table import Table, vstack
 from astropy.coordinates import SkyCoord
 
-import helpers
+from . import helpers
 
 class SkyData:
 
@@ -57,10 +57,10 @@ class SkyData:
         self.x = None
 
         # Check if output directories exist and create them if not
-        if not os.path.exists('Figures'):
-            os.mkdir('Figures')
+        if not os.path.exists('figures'):
+            os.mkdir('figures')
 
-        self.out_figures = os.path.join('Figures',self.cat_name)
+        self.out_figures = os.path.join('figures',self.cat_name)
         if not os.path.exists(self.out_figures):
             os.mkdir(self.out_figures)
 
@@ -68,7 +68,7 @@ class SkyData:
 
     def apply_cuts(self, flux_cut=None, galactic_cut=None, snr_cut=None, 
             mask_bright=None, mask_file=None, invert_mask_file=False):
-        '''
+        """
         Apply cuts in the data to prepare for a dipole measurement
 
         Keyword arguments:
@@ -78,7 +78,7 @@ class SkyData:
                                    above this flux density
         mask_file (string)      -- File containing areas to mask
         invert_mask_file (bool) -- Invert the mask specified by the mask file
-        '''
+        """
         if galactic_cut:
             self.catalog = self.catalog[np.logical_or(self.catalog['b'] < -1*galactic_cut,
                                                       self.catalog['b'] > galactic_cut)]
@@ -87,7 +87,9 @@ class SkyData:
             self.catalog = self.catalog[self.catalog[self.flux_col] > flux_cut]
 
         if snr_cut:
-            snr = self.catalog[self.peak_flux_col]/self.catalog[self.rms_col]
+            # Based on median noise from healpix pixel
+            noise = self.hpx_table[self.rms_col][self.catalog['hpx_idx']]
+            snr = self.catalog[self.peak_flux_col]/noise
             self.catalog = self.catalog[snr > snr_cut]
 
         if mask_bright:
@@ -111,22 +113,23 @@ class SkyData:
             if not isinstance(mask_file, list):
                 mask_file = [mask_file]
                 invert_mask_file = [invert_mask_file]
+
             for i, file in enumerate(mask_file):
-                # Parse fits file
                 if file.endswith('.fits'):
+                    # Parse fits file
                     print('Using mask file',file)
 
-                    path = Path(__file__).parent / 'weights-masks' / file
+                    path = Path(__file__).parents[1] / 'weights-masks' / file
                     mask = hp.read_map(path)
                     if invert_mask_file[i]:
                         self.user_mask = np.invert(mask)
                     else:
                         self.user_mask = mask
 
-                # Assume table
                 else:
+                    # Assume table
                     print('Using mask file',file)
-                    path = Path(__file__).parent / 'weights-masks' / file
+                    path = Path(__file__).parents[1] / 'weights-masks' / file
                     mask = Table.read(path)
 
                     mask_sources = np.zeros(len(self.catalog))
@@ -165,7 +168,7 @@ class SkyData:
         print(f'Number of sources in catalog after masking is {len(self.catalog)}')
 
     def apply_additional_cuts(self, col, low, high, include=True):
-        '''
+        """
         Apply additional cuts to the catalog
 
         Keyword arguments:
@@ -173,7 +176,7 @@ class SkyData:
         low (float)    -- Value of lower limit
         high (float)   -- Value of upper limit
         include (bool) -- Whether to include all values with set limits
-        '''
+        """
         if include:
             self.catalog = self.catalog[np.logical_and(self.catalog[col] > low,
                                                        self.catalog[col] < high)]
@@ -184,22 +187,25 @@ class SkyData:
         print(f"Number of sources after additional cuts is {len(self.catalog)}")
 
     def to_healpix_map(self, NSIDE, strict_mask=True):
-        '''
+        """
         Create a healpix map of a given catalog
 
         Keyword arguments:
         NSIDE (int)        -- Resolution of healpix map
         strict_mask (bool) -- Mask all pixels with a masked neighbour
-        '''
+        """
         self.NSIDE = NSIDE
 
         indices = hp.ang2pix(self.NSIDE, 
                              self.catalog['theta'], 
                              self.catalog['phi'])
+        # Save index for later use
+        self.catalog['hpx_idx'] = indices
+
+        # Create map
         idx, inverse, number_counts  = np.unique(indices,
                                                  return_inverse=True,
                                                  return_counts=True)
-
         NPIX = hp.nside2npix(self.NSIDE)
         self.hpx_map = np.zeros(NPIX)
         self.hpx_map[idx] = number_counts
@@ -242,27 +248,30 @@ class SkyData:
         self.total_sources = int(np.sum(self.hpx_map))
 
     def apply_weights(self, weight_file):
+        """
+        Apply weights to HEALPix map
 
+        Keyword arguments:
+        weight_file (str) -- Name of weight file, assumed HEALPix
+        """
         print('Using weight file',weight_file)
 
         path = Path(__file__).parent / 'weights-masks' / weight_file
         weights = hp.read_map(path)
         self.hpx_map = self.hpx_map / weights
 
-    def median_healpix_map(self, NSIDE, col):
-        '''
+    def median_healpix_map(self, col):
+        """
         Make a HEALPix map of some column, taking the median for each cell
 
         Keyword arguments:
-        NSIDE (int) -- Resolution of HEALPix map
-        col (str)   -- Name of the table column to take value from
-        '''
-        indices = hp.ang2pix(NSIDE, self.catalog['theta'], self.catalog['phi'])
-        idx, inverse, number_counts  = np.unique(indices, 
-                                                 return_inverse=True, 
+        col (str) -- Name of the table column to take value from
+        """
+        indices = hp.ang2pix(self.NSIDE, self.catalog['theta'], self.catalog['phi'])
+        idx, inverse, number_counts  = np.unique(indices, return_inverse=True, 
                                                 return_counts=True)
 
-        NPIX = hp.nside2npix(NSIDE)
+        NPIX = hp.nside2npix(self.NSIDE)
         hpx_map = np.array([np.nanmedian(self.catalog[col][indices == i]) for i in range(NPIX)])
 
         # Add result to HEALPix table as well
@@ -271,13 +280,13 @@ class SkyData:
         return hpx_map
 
     def show_map(self, input_map=None, name='counts', **kwargs):
-        '''
+        """
         Display healpix map
 
         Keyword arguments:
         input_map (array) -- Input HEALPix map
-        name (string)     -- Name of quantity to include in plot name
-        '''
+        name (string)     -- Name to include in plot name
+        """
         if input_map is None:
             input_map = self.hpx_map
         masked = hp.ma(input_map)
@@ -287,14 +296,22 @@ class SkyData:
         cmap.set_bad(color='grey')
 
         projview(masked, cmap=cmap, **kwargs)
-        plt.savefig(os.path.join(self.out_figures,
-                        f'{self.cat_name}_{name}_NSIDE{self.NSIDE}.png'),
-                    dpi=300)
+
+        outfile = f'{self.cat_name}_{name}_NSIDE{self.NSIDE}.png'
+        plt.savefig(os.path.join(self.out_figures, outfile), dpi=300)
         plt.close()
 
-    def smoothed_map(self, mean):
+    def smoothed_map(self, mean, rad=1.0):
+        """
+        Smooth healpix map with Gaussian kernel
 
-        def masked_smoothing(U, rad=5.0):
+        Keyword arguments:
+        mean (float) -- Mean value of map
+        rad (float)  -- Size of kernel, in radians
+        """
+
+        def masked_smoothing(U, rad):
+            """Smooth a masked map"""
             V=U.copy()
             V[U!=U]=0
             VV=hp.smoothing(V, fwhm=rad)
@@ -303,9 +320,9 @@ class SkyData:
             WW=hp.smoothing(W, fwhm=rad)
             return VV/WW
 
-        nan_map = self.hpx_map
+        nan_map = self.hpx_map-mean
         nan_map[self.hpx_mask] = np.nan
-        smoothed = masked_smoothing(nan_map, rad=1.0)
+        smoothed = masked_smoothing(nan_map, rad)
 
         smoothed_masked = hp.ma(smoothed)
         smoothed_masked.mask = self.hpx_mask
@@ -314,33 +331,36 @@ class SkyData:
         cmap.set_bad(color='grey')
 
         projview(smoothed_masked, cmap=cmap)
-        plt.savefig(os.path.join(self.out_figures,
-                        f'{self.cat_name}_smoothed_counts_NSIDE{self.NSIDE}.png'),
-                    dpi=300)
+        plt.grid(True)
+
+        outfile = f'{self.cat_name}_smoothed{rad}rad_counts_NSIDE{self.NSIDE}.png'
+        plt.savefig(os.path.join(self.out_figures, outfile), dpi=300)
         plt.close()
 
-    def rms_power_law(self, fit_rms, fit_sources, plot=False):
-        '''
+        return smoothed_masked
+
+    def rms_power_law(self, rms, counts, plot=False):
+        """
         Fit a power law between local RMS and number of sources in cells
 
         Keyword arguments:
-        fit_rms (array)     -- RMS values
-        fit_sources (array) -- Source count values
-        plot (bool)         -- Whether to plot values and the fit
-        '''
+        rms (array)    -- RMS values
+        counts (array) -- Source count values
+        plot (bool)    -- Whether to plot values and the fit
+        """
         def power_law(x, a, b):
             return a*x**(-b)
 
-        popt, pcov = curve_fit(power_law, fit_rms/self.sigma_ref, fit_sources)
+        popt, pcov = curve_fit(power_law, rms/self.sigma_ref, counts)
         print(f'Fit power law with index {popt[1]:.2f} and normalization {popt[0]:.2f}')
         print('Calculating mean values')
 
         if plot:
-            rms_range = np.linspace(fit_rms.min()/self.sigma_ref,
-                                    fit_rms.max()/self.sigma_ref, 50)
+            rms_range = np.linspace(rms.min()/self.sigma_ref,
+                                    rms.max()/self.sigma_ref, 50)
             plt.plot(rms_range*self.sigma_ref, power_law(rms_range, *popt), '--k', 
                      label=f'$N = {{{popt[0]:.0f}}}\cdot(\\sigma/\\sigma_0)^{{-{popt[1]:.2f}}}$')
-            plt.scatter(fit_rms, fit_sources, s=1, marker='+', color='k', label='Data')
+            plt.scatter(rms, counts, s=1, marker='+', color='k', label='Data')
 
             plt.xlabel('$\\sigma$ (mJy/beam)')
             plt.ylabel('N (counts/pixel)')
@@ -349,17 +369,16 @@ class SkyData:
             plt.legend()
 
             plt.autoscale(enable=True, axis='x', tight=True)
-            plt.savefig(os.path.join(self.out_figures,
-                            f'{self.cat_name}_rms_pow_NSIDE{self.NSIDE}.png'),
-                        dpi=300)
+            outfile = f'{self.cat_name}_rms_pow_NSIDE{self.NSIDE}.png'
+            plt.savefig(os.path.join(self.out_figures, outfile), dpi=300)
             plt.close()
 
         return popt[0], popt[1]
 
     def flux_power_law(self):
-        '''
+        """
         Fit power law to flux distribution
-        '''
+        """
         def power_law(x, a, b):
             return a*x**(-b)
 
@@ -388,13 +407,13 @@ class SkyData:
         plt.close()
 
     def plot_poisson(self, counts, poisson_lambda):
-        '''
+        """
         Plot source counts distribution and Poisson distribution with same mean
 
         Keyword arguments:
         counts (array)         -- Array of source counts
         poisson_lambda (float) -- Lambda value for Poisson distribution
-        '''
+        """
         bins = np.arange(counts.min(), counts.max())
         poisson_prob = poisson.pmf(bins, poisson_lambda)
 
@@ -405,15 +424,14 @@ class SkyData:
         plt.xlabel('Cell counts')
         plt.legend()
 
-        plt.savefig(os.path.join(self.out_figures,
-                        f'{self.cat_name}_poisson_counts_NSIDE{self.NSIDE}.png'), 
-                    dpi=300)
+        outfile = f'{self.cat_name}_poisson_counts_NSIDE{self.NSIDE}.png'
+        plt.savefig(os.path.join(self.out_figures,outfile), dpi=300)
         plt.close()
 
 def catalog_data(params, NSIDE, flux_cut, snr_cut, extra_fit=False):
-    '''
+    """
     Prepare catalog for a dipole measurement
-    '''
+    """
     catalog = Table.read(params['catalog']['path'])
     data = SkyData(catalog, params['catalog']['name'], **params['columns'])
 
@@ -427,12 +445,13 @@ def catalog_data(params, NSIDE, flux_cut, snr_cut, extra_fit=False):
             data.apply_additional_cuts(**cut)
 
     if extra_fit == 'noise':
-        data.apply_cuts(snr_cut=snr_cut)
-        data.to_healpix_map(NSIDE)
-
         rms = data.median_healpix_map(NSIDE, data.rms_col)
         data.sigma_ref = np.nanmedian(rms[~np.isnan(rms)])
         print(f'Median RMS value {data.sigma_ref} mJy/beam')
+
+        data.to_healpix_map(NSIDE)
+        data.apply_cuts(snr_cut=snr_cut)
+        data.to_healpix_map(NSIDE)
 
         data.show_map(rms, name='RMS')
         data.show_map(name='counts_nocut')

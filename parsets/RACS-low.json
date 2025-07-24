@@ -1,7 +1,7 @@
 [{
 	"catalog" : {
-		"path" : "data/racs_low.fits",
-		"name" : "RACS-low",
+		"path" : "data/racs-2mrs_z0.02.fits",
+		"name" : "RACS-low-2MRS",
 		"default_flux_cut" : 15.0
 		},
 	"columns" : {

@@ -1,9 +1,9 @@
 import os
 import sys
 import json
-from pathlib import Path
 
 import numpy as np
+from pathlib import Path
 from copy import deepcopy
 
 import cycler
@@ -22,7 +22,7 @@ from astropy.io import fits, ascii
 from astropy.table import Table, vstack
 from astropy.coordinates import SkyCoord, Angle
 
-import helpers
+from . import helpers
 
 class PointingData:
 
@@ -42,14 +42,18 @@ class PointingData:
         self.pointings = None
         self.total_sources = len(self.catalog)
 
-        self.out_figures = os.path.join('Figures',self.cat_name)
+        # Check if output directories exist and create them if not
+        if not os.path.exists('figures'):
+            os.mkdir('figures')
+
+        self.out_figures = os.path.join('figures',self.cat_name)
         if not os.path.exists(self.out_figures):
             os.mkdir(self.out_figures)
 
     def separate_pointings(self):
-        '''
+        """
         Build table of separate pointings from the full catalog
-        '''
+        """
         self.pointings = Table()
 
         catalog_by_pointings = self.catalog.group_by(self.pointing_col)
@@ -72,9 +76,9 @@ class PointingData:
             self.pointings['rms'] = np.array([group[0][self.rms_col] for group in catalog_by_pointings.groups])
 
     def read_pointings_catalog(self, catalog, pointing_col, ra_col, dec_col, rms_col):
-        '''
+        """
         Read in prepared catalog of pointings
-        '''
+        """
         self.pointings = catalog
 
         self.pointings['source_id'] = catalog[pointing_col]
@@ -95,7 +99,7 @@ class PointingData:
             self.pointings['rms'] = catalog[rms_col]
 
     def apply_cuts_sources(self, flux_cut=None, snr_cut=None, bool_col=None, exclude_col=True):
-        '''
+        """
         Apply cuts in source catalog to prepare for a dipole measurement
 
         Keyword arguments:
@@ -103,7 +107,7 @@ class PointingData:
         snr_cut (float)    -- Lower signal to noise cut
         bool_col (float)   -- Boolean column to select sources
         exclude_col (bool) -- Whether to select include true values or false
-        '''
+        """
         if snr_cut:
             snr = self.catalog[self.peak_flux_col]/self.catalog[self.rms_col]
             self.catalog = self.catalog[snr > snr_cut]
@@ -117,6 +121,7 @@ class PointingData:
             else:
                 self.catalog = self.catalog[self.catalog[bool_col]]
 
+        # Recalculate number of sources in pointings
         for pointing in self.pointings:
             pointing_sources = self.catalog[self.pointing_col] == pointing['source_id']
             pointing['n_sources'] = len(self.catalog[pointing_sources])
@@ -126,15 +131,15 @@ class PointingData:
         print(f"Number of sources after source cuts is {self.total_sources}")
 
     def apply_cuts_pointings(self, col, low, high, include=True):
-        '''
+        """
         Apply cuts in source catalog to prepare for a dipole measurement
 
         Keyword arguments:
-        col (str)        -- Column to select on
-        low (float)      -- Lower bound of values
-        high (float)     -- Upper bound of values
-        include (bool)   -- Whether to select inside or outside bounds
-        '''
+        col (str)      -- Column to select on
+        low (float)    -- Lower bound of values
+        high (float)   -- Upper bound of values
+        include (bool) -- Whether to select inside or outside bounds
+        """
         if include:
             self.pointings = self.pointings[np.logical_and(self.pointings[col] > low,
                                                            self.pointings[col] < high)]
@@ -147,9 +152,12 @@ class PointingData:
         print(f"Number of sources after {col} cuts is {self.total_sources} in {len(self.pointings)} pointings")
 
     def completeness_counts(self, completeness_col):
-        '''
-        Calculate effective number counts
-        '''
+        """
+        Calculate effective number counts given completeness
+
+        Keyword arguments:
+        completeness_col (str) -- Column containing completeness measure
+        """
         for pointing in self.pointings:
             pointing_sources = self.catalog[self.catalog[self.pointing_col] == pointing['source_id']]
 
@@ -157,7 +165,14 @@ class PointingData:
             pointing['n_sources'] = eff_counts
 
     def rms_power_law(self, rms, counts, plot=False):
+        """
+        Fit a power law between local RMS and number of sources in pointings
 
+        Keyword arguments:
+        rms (array)    -- RMS values
+        counts (array) -- Source count values
+        plot (bool)    -- Whether to plot values and the fit
+        """
         def power_law(x, a, b):
             return a*x**(-b)
 
@@ -182,9 +197,9 @@ class PointingData:
         return popt[0], popt[1]
 
     def flux_power_law(self):
-        '''
+        """
         Fit power law to flux distribution
-        '''
+        """
         def power_law(x, a, b):
             return a*x**(-b)
 
@@ -207,12 +222,18 @@ class PointingData:
         plt.ylabel('Counts')
         plt.legend()
 
-        plt.savefig(os.path.join(self.out_figures, 
-                                 f'{self.cat_name}_flux_dist.png'), 
-                    dpi=300)
+        outfile = f'{self.cat_name}_flux_dist.png'
+        plt.savefig(os.path.join(self.out_figures, outfile), dpi=300)
         plt.close()
 
     def plot_poisson(self, counts, poisson_lambda):
+        """
+        Plot source counts distribution and Poisson distribution with same mean
+
+        Keyword arguments:
+        counts (array)         -- Array of source counts
+        poisson_lambda (float) -- Lambda value for Poisson distribution
+        """
         bins = np.arange(counts.min(), counts.max())
         poisson_prob = poisson.pmf(bins, poisson_lambda)
 
@@ -224,15 +245,14 @@ class PointingData:
         plt.xlabel('Cell counts')
         plt.legend()
 
-        plt.savefig(os.path.join(self.out_figures,
-                                 f'{self.cat_name}_poisson_counts.png'), 
-                    dpi=300)
+        outfile = f'{self.cat_name}_poisson_counts.png'
+        plt.savefig(os.path.join(self.out_figures,outfile), dpi=300)
         plt.close()
 
-def catalog_data(params, flux_cut, snr_cut, extra_fit=False, completeness=None):
-    '''
+def catalog_data(params, flux_cut, snr_cut, extra_fit=None, completeness=None):
+    """
     Prepare catalog for a dipole measurement
-    '''
+    """
     source_catalog = Table.read(params['catalog']['path'])
     data = PointingData(source_catalog, params['catalog']['name'], **params['columns'])
 

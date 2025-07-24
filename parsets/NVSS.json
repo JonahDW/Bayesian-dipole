@@ -1,7 +1,7 @@
 [{
 	"catalog" : {
-		"path" : "data/nvss.fits",
-		"name" : "NVSS",
+		"path" : "data/nvss-2mrs_z0.02.fits",
+		"name" : "NVSS-2MRS",
 		"default_flux_cut" : 15.0
 		},
 	"columns" : {
