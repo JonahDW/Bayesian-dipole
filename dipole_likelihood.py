@@ -174,24 +174,24 @@ def estimate_multi_dipole(catalogs, priors, injection_parameters,
     ndim = 3+len(catalogs)
 
     if dipole_mode.lower() == 'amplitude':
-        likelihood = MultiPoissonLikelihood(all_obs, all_pix, NSIDES)
+        likelihood = likelihoods.MultiPoissonLikelihood(all_obs, all_pix, NSIDES)
 
     if dipole_mode.lower() == 'velocity':
         results_label += '_velocity'
-        likelihood = MultiPoissonVelocityLikelihood(all_obs, all_pix, 
-                                                    alpha, x, NSIDES)
+        likelihood = likelihoods.MultiPoissonVelocityLikelihood(all_obs, all_pix, 
+                                                                alpha, x, NSIDES)
 
     if dipole_mode.lower() == 'combined':
         results_label += '_combined'
         ndim += 1
-        likelihood = MultiPoissonCombinedLikelihood(all_obs, all_pix, 
-                                                    alpha, x, NSIDES)
+        likelihood = likelihoods.MultiPoissonCombinedLikelihood(all_obs, all_pix, 
+                                                                alpha, x, NSIDES)
 
     if dipole_mode.lower() == 'combined-dir':
         results_label += '_combined-dir'
         ndim += 3
-        likelihood = MultiPoissonCombinedDirLikelihood(all_obs, all_pix,
-                                                       alpha, x, NSIDES)
+        likelihood = likelihoods.MultiPoissonCombinedDirLikelihood(all_obs, all_pix,
+                                                                   alpha, x, NSIDES)
 
     result = bilby.run_sampler(likelihood=likelihood,
                                priors=priors,
