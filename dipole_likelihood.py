@@ -22,6 +22,8 @@ def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
     Estimate the dipole with a single catalogue
     '''
     label = f'{catalog.cat_name}'
+    ndim = 4
+
     if catalog.NSIDE is not None:
         label += f'_NSIDE{catalog.NSIDE}'
         obs = catalog.hpx_map[~catalog.hpx_mask]
@@ -59,7 +61,7 @@ def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
         injection_parameters['rms_amp'] = pow_norm
         injection_parameters['rms_pow'] = pow_index
 
-        ndim = 5
+        ndim += 1
         likelihood = likelihoods.PoissonRMSLikelihood(obs, rms, pix, 
                                                       catalog.sigma_ref, 
                                                       catalog.NSIDE)
@@ -90,7 +92,7 @@ def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
         injection_parameters['monopole'] = mean_counts
         injection_parameters['lin_amp'] = 0
 
-        ndim = 5
+        ndim += 1
         likelihood = likelihoods.PoissonLinearLikelihood(obs, fit_vals, pix, catalog.NSIDE)
 
     elif extra_fit == 'dipole':
@@ -108,7 +110,7 @@ def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
         injection_parameters['dipole2_ra'] = 0.0
         injection_parameters['dipole2_dec'] = 0.0
 
-        ndim = 7
+        ndim += 3
         likelihood = likelihoods.PoissonDoubleDipoleLikelihood(obs, pix, catalog.NSIDE)
 
     else:
@@ -121,7 +123,6 @@ def estimate_dipole(catalog, priors, injection_parameters, extra_fit, fit_col,
         priors['monopole'] = bilby.core.prior.Uniform(0, 2*mean_counts, '$\\mathcal{M}$')
         injection_parameters['monopole'] = mean_counts
 
-        ndim = 4
         likelihood = likelihoods.PoissonLikelihood(obs, pix, catalog.NSIDE)
 
     result = bilby.run_sampler(likelihood=likelihood,
@@ -206,8 +207,7 @@ def estimate_multi_dipole(catalogs, priors, injection_parameters,
 
     return result
 
-def save_results(result, catalogs, flux_cuts, snr_cut, nside, results_dir,
-                 extra_fit=None, fit_col=None, completeness=None):
+def save_results(result, catalogs, flux_cuts, nside, results_dir, **kwargs):
     '''
     Get result and configuration and save in dict
     '''
@@ -218,14 +218,9 @@ def save_results(result, catalogs, flux_cuts, snr_cut, nside, results_dir,
     current_result['parameters']['nsources'] = int(sum([catalog.total_sources for catalog in catalogs]))
     current_result['parameters']['nside'] = nside
     current_result['parameters']['flux_cut'] = ','.join([str(flux_cut) for flux_cut in flux_cuts])
-    if snr_cut is not None:
-        current_result['parameters']['snr_cut'] = str(snr_cut)
-    if extra_fit is not None:
-        current_result['parameters']['extra_fit'] = extra_fit
-    if fit_col is not None:
-        current_result['parameters']['fit_col'] = fit_col
-    if completeness is not None:
-        current_result['parameters']['completeness'] = completeness
+    for key, value in kwargs.items():
+        if value is not None:
+            current_result['parameters'][key] = value
 
     current_result['results'] = {}
     keys = result.search_parameter_keys
@@ -351,11 +346,13 @@ def main():
                                        results_dir, dipole_mode, clean)
         result.plot_corner(titles=False, show_titles=True, title_fmt='.3g',
                            color='navy', truth_color='crimson', smooth=1.5)
-        save_results(result, catalogs, flux_cuts, snr_cut, nside, results_dir)
+        save_results(result, catalogs, flux_cuts, nside, results_dir, 
+                     dipole_mode=dipole_mode)
     else:
         result = results[0]
-        save_results(result, catalogs, flux_cuts, snr_cut, nside, results_dir,
-                     extra_fit, fit_col, completeness)
+        save_results(result, catalogs, flux_cuts, nside, results_dir,
+                     snr_cut=snr_cut, extra_fit=extra_fit, fit_col=fit_col, 
+                     completeness=completeness)
 
 def new_argument_parser():
 
@@ -371,10 +368,10 @@ def new_argument_parser():
     parser.add_argument("--flux_cut", default=None, type=float,
                         help="""Lower flux density limit, will overwrite the value
                                 present in the parameter json file.""")
-    parser.add_argument("--snr_cut", default=None, type=float,
-                        help="""Lower S/N limit.""")
     parser.add_argument("--results_dir", default='Results', type=str,
                         help="""Directory where to store results""")
+    parser.add_argument("--snr_cut", default=None, type=float,
+                        help="""Lower S/N limit.""")
     parser.add_argument('--extra_fit', default=None, type=str,
                         help="""Fit additional relation to the data to model 
                                 systematic effects. Current options are 
