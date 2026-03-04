@@ -99,36 +99,7 @@ def flux_dipole(beta, alpha, theta):
     '''Change observed flux densities given dipole and spectral index'''
     return ((1+beta*np.cos(theta))/np.sqrt(1-beta**2))**(1+alpha)
 
-def make_dipole_healpix(NSIDE, a, x, y=None, z=None):
-    '''
-    Probability density function of a dipole. 
-    Returns 1 + a * cos(theta) for all pixels in hp.nside2npix(nside)
-    Function adapted from astrotools.healpytools
-    (https://astro.pages.rwth-aachen.de/astrotools/)
-
-    Keyword arguments:
-    NSIDE (int) -- Resolution of the healpix map
-    a (float) -- amplitude of the dipole
-    x (array) -- x-coordinate of the center or
-                 numpy array with center coordinates (cartesian definition)
-    y (array) -- y-coordinate of the center
-    z (array) -- z-coordinate of the center
-    '''
-    if y is None and z is None:
-        direction = np.array(x, dtype=np.float)
-    else:
-        direction = np.array([x, y, z], dtype=np.float)
-
-    # normalize to one
-    direction /= np.sqrt(np.sum(direction ** 2))
-    npix = hp.nside2npix(NSIDE)
-    v = np.array(hp.pix2vec(NSIDE, np.arange(npix)))
-
-    cos_angle = np.sum(v.T * direction, axis=1)
-
-    return 1 + a * cos_angle
-
-def make_dipole_discrete(theta, phi, a, x, y=None, z=None, angle_only=False):
+def make_dipole(theta, phi, a, x, y=None, z=None):
     '''
     Probability density function of a dipole. Returns 1 + a * cos(theta)
     Function adapted from astrotools.healpytools 
@@ -153,7 +124,30 @@ def make_dipole_discrete(theta, phi, a, x, y=None, z=None, angle_only=False):
     direction /= np.sqrt(np.sum(direction ** 2))
     cos_angle = np.sum(v * direction, axis=1)
 
-    if angle_only:
-        return np.arccos(cos_angle)
+    return 1 + a * cos_angle
+
+def make_dipole_healpix(NSIDE, a, x, y=None, z=None):
+    '''
+    Probability density function of a dipole. 
+    Returns 1 + a * cos(theta) for all pixels in hp.nside2npix(nside)
+    Function adapted from astrotools.healpytools
+    (https://astro.pages.rwth-aachen.de/astrotools/)
+
+    Keyword arguments:
+    NSIDE (int) -- Resolution of the healpix map
+    a (float) -- amplitude of the dipole
+    x (array) -- x-coordinate of the center or
+                 numpy array with center coordinates (cartesian definition)
+    y (array) -- y-coordinate of the center
+    z (array) -- z-coordinate of the center
+    '''
+    if y is None and z is None:
+        direction = np.array(x, dtype=np.float)
     else:
-        return 1 + a * cos_angle
+        direction = np.array([x, y, z], dtype=np.float)
+
+    npix = hp.nside2npix(NSIDE)
+    theta, phi = hp.pix2ang(NSIDE, np.arange(npix))
+    dipole = make_dipole(theta, phi, a, x)
+
+    return 1 + dipole

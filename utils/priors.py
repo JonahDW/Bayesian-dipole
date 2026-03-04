@@ -41,3 +41,38 @@ class CosineDeg(bilby.core.prior.Prior):
         _cdf[val > self.maximum] = 1
         _cdf[val < self.minimum] = 0
         return _cdf
+
+def default_dipole_priors(dipole_mode):
+    # Set up dipole parameters
+
+    priors = dict()
+    injection_parameters = dict()
+    if dipole_mode.lower() == 'amplitude':
+        priors['amp'] = bilby.core.prior.Uniform(0,1,'$\\mathcal{D}$')
+        injection_parameters['amp'] = 4.5e-3
+    if dipole_mode.lower() == 'velocity':
+        priors['beta'] = bilby.core.prior.Uniform(0,0.1,'$\\beta$')
+        injection_parameters['beta'] = 1.23e-3
+    if dipole_mode.lower() == 'combined':
+        priors['amp'] = bilby.core.prior.Uniform(0,0.5,'$\\mathcal{D}$')
+        priors['beta'] = bilby.core.prior.Uniform(0,0.05,'$\\beta$')
+        injection_parameters['amp'] = 4.5e-3
+        injection_parameters['beta'] = 1.23e-3
+    if dipole_mode.lower() == 'combined-dir':
+        priors['amp'] = bilby.core.prior.Uniform(0,0.5,'$\\mathcal{D}$')
+        priors['beta'] = bilby.core.prior.Uniform(0,0.05,'$\\beta$')
+        priors['vel_ra'] = bilby.core.prior.Uniform(0,360.,'vel RA')
+        priors['vel_dec'] = cpriors.CosineDeg(-90.,90.,'vel DEC')
+
+        injection_parameters['amp'] = 4.5e-3
+        injection_parameters['beta'] = 1.23e-3
+        injection_parameters['vel_ra'] = 168.
+        injection_parameters['vel_dec'] = -7.
+
+    priors['dipole_ra'] = bilby.core.prior.Uniform(0,360.,'RA')
+    priors['dipole_dec'] = CosineDeg(-90.,90.,'DEC')
+
+    injection_parameters['dipole_ra'] = 140.
+    injection_parameters['dipole_dec'] = -7.
+
+    return priors, injection_parameters
