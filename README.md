@@ -22,31 +22,38 @@ If the json dictionary contains the `pointing_columns` key, the catalogue will b
 ### Full list of arguments
 ```
 usage: dipole_likelihood.py [-h] [--nside NSIDE] [--flux_cut FLUX_CUT]
-                            [--snr_cut SNR_CUT] [--results_dir RESULTS_DIR]
-                            [--extra_fit EXTRA_FIT] [--fit_col FIT_COL]
+                            [--results_dir RESULTS_DIR] [--snr_cut SNR_CUT]
+                            [--extra_fit EXTRA_FIT] [--fit_val FIT_VAL]
+                            [--healpix_mask HEALPIX_MASK] [--invert_mask]
                             [--completeness [COMPLETENESS]]
-                            [--dipole_mode DIPOLE_MODE] [--keep_results]
+                            [--dipole_mode DIPOLE_MODE]
+                            [--statistic STATISTIC] [--keep_results]
                             catalog_name
 
 positional arguments:
   catalog_name          Name of the catalog to fit dipole. Name should either
                         match a corresponding json file in the parsets
-                        directory (withouth the extension) or be SIM, in which
-                        case a catalogue will be simulated.
+                        directory (withouth the extension) or a HEALPix map,
+                        with a .fits extension.
 
 optional arguments:
   -h, --help            show this help message and exit
-  --nside NSIDE         NSIDE parameter for HEALPix
+  --nside NSIDE         nside parameter for HEALPix
   --flux_cut FLUX_CUT   Lower flux density limit, will overwrite the value
                         present in the parameter json file.
-  --snr_cut SNR_CUT     Lower S/N limit.
   --results_dir RESULTS_DIR
                         Directory where to store results
+  --snr_cut SNR_CUT     Lower S/N limit.
   --extra_fit EXTRA_FIT
                         Fit additional relation to the data to model
                         systematic effects. Current options are 'noise' and
                         'linear' (default = no additional fit)
-  --fit_col FIT_COL     Which column in the catalogue to use for extra fit.
+  --fit_val FIT_VAL     Which column in the catalogue to use for extra fit.
+                        Alternatively, a HEALPix map can be specified, which
+                        should end in '.fits'.
+  --healpix_mask HEALPIX_MASK
+                        Additional optional HEALPix mask.
+  --invert_mask         Invert HEALPix mask specified in --healpix_mask.
   --completeness [COMPLETENESS]
                         Use completeness when looking at number counts,
                         provided a column which stores the completeness of
@@ -60,6 +67,8 @@ optional arguments:
                         component and intrinsic dipole. Latter options require
                         specification of spectral index and power law index of
                         flux distribution (x) in json file
+  --statistic STATISTIC
+                        Use 'poisson' or 'nb' for negative binomial
   --keep_results        Specify if you wish to keep results from the
                         estimator. If specified the script will only run the
                         diagnostic plots (default=False).
@@ -107,7 +116,7 @@ optional arguments:
                         Path to Haslam map to correlate with data.
 ```
 
-## Citation and relevant papers
+## Citation, relevant papers and versions
 
 If you use this code and wish to cite it, you can do so as follows:
 
@@ -115,4 +124,20 @@ If you use this code and wish to cite it, you can do so as follows:
 Wagenveld, J.D. 2023, JonahDW/Bayesian-dipole: Bayesian dipole inference, Zenodo, DOI: 10.5281/zenodo.7962922
 ```
 
-This code has been used to produce the results in [Wagenveld et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023A%26A...675A..72W/abstract), in which the [NVSS](https://www.cv.nrao.edu/nvss/) and [RACS-low](https://research.csiro.au/casda/the-rapid-askap-continuum-survey-stokes-i-source-catalogue-data-release-1/) catalogues were used. In [Wagenveld et al. (2024)](https://ui.adsabs.harvard.edu/abs/2024arXiv240816619W/abstract), this software was used on the [MALS DR2](https://mals.iucaa.in/releases) catalogue. In [Wagenveld et al. (2025)](https://ui.adsabs.harvard.edu/abs/2025A%26A...697A.112W/abstract), this software was used on the NVSS, RACS-low, and CatWISE catalogues to perform joint dipole estimations to disentangle kinematic and residual contributions to the total dipole amplitude.
+Depending on the functionality/version used, relevant works can be cited as specified below:
+
+### Current version (03.2026) 
+
+Included functionality to include Negative Binomial statistics in addition to the default Poisson statistics. The use of Negative Binomial in dipole estimation is described in [Böhme et al. (2025)](https://ui.adsabs.harvard.edu/abs/2025PhRvL.135t1001B/abstract).
+
+### v0.3 (03.2025) 
+
+Included functionality to include different contributions (kinematic or instrinsic) contributions to the overall dipole amplitude when multiple catalogues are used. This was used in [Wagenveld et al. (2025)](https://ui.adsabs.harvard.edu/abs/2025A%26A...697A.112W/abstract) on the NVSS, RACS-low, and CatWISE catalogues to perform joint dipole estimations to disentangle kinematic and residual contributions to the total dipole amplitude.
+
+### v0.2 (08.2024)
+
+Included functionality to handle 'pointings', meaning discrete directions on sky. This can be used instead of discretising a contiguous survey with HEALPix. In [Wagenveld et al. (2024)](https://ui.adsabs.harvard.edu/abs/2024arXiv240816619W/abstract), this was used on the [MALS DR2](https://mals.iucaa.in/releases) catalogue. 
+
+### v0.1 (05.2023)
+
+First release, including a standard Poisson estimator, as well as the rms estimator and the multi-catalogue estimator. This was used to produce the results in [Wagenveld et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023A%26A...675A..72W/abstract), in which the NVSS and RACS-low catalogues were used. 

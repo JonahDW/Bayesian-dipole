@@ -39,9 +39,8 @@ class DipoleLikelihood(bilby.Likelihood):
         cells (array) -- Pixels indices corresponding to the measurements
         nside (int)   -- Resolution of the healpix map
         """
-        super().__init__(parameters={'amp': None, 'dipole_ra': None, 
-                                     'dipole_dec': None, 'monopole':None,
-                                     'p':None})
+        parameters = {'amp': None, 'dipole_ra': None, 
+                      'dipole_dec': None, 'monopole':None}
         self.obs = obs
 
         # Determine which likelihood to use
@@ -49,6 +48,10 @@ class DipoleLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
+            parameters['p'] = None
+
+        # Initialise parameters
+        super().__init__(parameters)
 
         # Get pixel directions
         if nside is None:
@@ -84,9 +87,9 @@ class DoubleDipoleLikelihood(bilby.Likelihood):
         cells (array) -- Pixels indices corresponding to the measurements
         nside (int)   -- Resolution of the healpix map
         """
-        super().__init__(parameters={'amp': None, 'dipole_ra': None, 'dipole_dec': None,
-                                     'amp2': None, 'dipole2_ra': None, 'dipole2_dec': None,
-                                     'monopole':None,'p':None})
+        parameters = {'amp': None, 'dipole_ra': None, 'dipole_dec': None,
+                      'amp2': None, 'dipole2_ra': None, 'dipole2_dec': None,
+                      'monopole':None}
         self.obs = obs
 
         # Determine which likelihood to use
@@ -94,6 +97,10 @@ class DoubleDipoleLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
+            parameters['p'] = None
+
+        # Initialise parameters
+        super().__init__(parameters)
 
         # Get pixel directions
         if nside is None:
@@ -143,8 +150,8 @@ class RMSLikelihood(bilby.Likelihood):
         sigma_ref (float)  -- RMS reference value
         nside (int)        -- Resolution of the healpix map
         """
-        super().__init__(parameters={'amp': None, 'dipole_ra': None, 'dipole_dec': None,
-                                     'monopole': None, 'x': None, 'p':None})
+        parameters = {'amp': None, 'dipole_ra': None, 'dipole_dec': None,
+                      'monopole': None, 'x': None}
         self.obs_counts = obs_counts
         self.obs_rms = obs_rms
         self.sigma_ref = sigma_ref
@@ -154,6 +161,10 @@ class RMSLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
+            parameters['p'] = None
+
+        # Initialise parameters
+        super().__init__(parameters)
 
         # Get pixel directions
         if nside is None:
@@ -194,8 +205,8 @@ class LinearLikelihood(bilby.Likelihood):
         cells (array)      -- Pixels corresponding to the measurements
         nside (int)        -- Resolution of the healpix map
         """
-        super().__init__(parameters={'amp': None, 'dipole_ra': None, 'dipole_dec': None,
-                                     'monopole':None, 'lin_amp': None, 'p':None})
+        parameters = {'amp': None, 'dipole_ra': None, 'dipole_dec': None,
+                      'monopole':None, 'lin_amp': None}
         self.obs_counts = obs_counts
         self.obs_lin = obs_lin
 
@@ -204,6 +215,10 @@ class LinearLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
+            parameters['p'] = None
+
+        # Initialise parameters
+        super().__init__(parameters)
 
         # Get pixel directions
         if nside is None:
@@ -249,9 +264,7 @@ class MultiLikelihood(bilby.Likelihood):
         parameters = {'amp': None, 'dipole_ra': None, 'dipole_dec': None}
         for i in range(len(all_obs)):
             parameters[f'monopole_{i}'] = None
-            parameters[f'p_{i}'] = None
 
-        super().__init__(parameters)
         self.all_obs = all_obs
 
         # Determine which likelihood to use
@@ -259,6 +272,11 @@ class MultiLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
+            for i in range(len(all_obs)):
+                parameters[f'p_{i}'] = None
+
+        # Initialise parameters
+        super().__init__(parameters)
 
         # Get pixel directions
         self.theta, self.phi = [], []
@@ -312,9 +330,7 @@ class MultiVelocityLikelihood(bilby.Likelihood):
         parameters = {'beta': None, 'dipole_ra': None, 'dipole_dec': None}
         for i in range(len(all_obs)):
             parameters[f'monopole_{i}'] = None
-            parameters[f'p_{i}'] = None
 
-        super().__init__(parameters)
         self.all_obs = all_obs
         self.alpha = alpha
         self.x = x
@@ -324,6 +340,11 @@ class MultiVelocityLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
+            for i in range(len(all_obs)):
+                parameters[f'p_{i}'] = None
+
+        # Initialise parameters
+        super().__init__(parameters)
 
         # Get pixel directions
         self.theta, self.phi = [], []
@@ -379,9 +400,7 @@ class MultiCombinedLikelihood(bilby.Likelihood):
         parameters = {'beta': None, 'amp': None, 'dipole_ra': None, 'dipole_dec': None}
         for i in range(len(all_obs)):
             parameters[f'monopole_{i}'] = None
-            parameters[f'p_{i}'] = None
 
-        super().__init__(parameters)
         self.all_obs = all_obs
         self.alpha = alpha
         self.x = x
@@ -391,6 +410,11 @@ class MultiCombinedLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
+            for i in range(len(all_obs)):
+                parameters[f'p_{i}'] = None
+
+        # Initialise parameters
+        super().__init__(parameters)
 
         # Get pixel directions
         self.theta, self.phi = [], []
@@ -449,9 +473,7 @@ class MultiCombinedDirLikelihood(bilby.Likelihood):
                       'amp': None, 'dipole_ra': None, 'dipole_dec': None}
         for i in range(len(all_obs)):
             parameters[f'monopole_{i}'] = None
-            parameters[f'p_{i}'] = None
 
-        super().__init__(parameters)
         self.all_obs = all_obs
         self.alpha = alpha
         self.x = x
@@ -461,6 +483,11 @@ class MultiCombinedDirLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
+            for i in range(len(all_obs)):
+                parameters[f'p_{i}'] = None
+
+        # Initialise parameters
+        super().__init__(parameters)
 
         # Get pixel directions
         self.theta, self.phi = [], []
