@@ -10,7 +10,7 @@ from scipy.stats import binned_statistic
 from pathlib import Path
 from argparse import ArgumentParser
 
-from utils.process_catalog import SkyData
+from utils.process_catalog import CatalogData
 
 def chi_square(x, x_model, k):
     """Calulate chi-square statistic"""
@@ -44,7 +44,7 @@ def plot_correlation(data, col, tag):
     col (str)    -- Column name in HEALPix table
     tag (str)    -- Additional tag for plot name
     """
-    col_hpx = data.hpx_table[col][~data.hpx_mask]
+    col_hpx = data.pix_table[col][~data.hpx_mask]
     counts = data.hpx_map[~data.hpx_mask]
 
     mean_count = np.mean(counts)
@@ -68,7 +68,7 @@ def plot_correlation(data, col, tag):
     plt.xlabel(col)
     plt.ylabel('Counts')
 
-    outfile = f'{data.cat_name}_{col}_counts_NSIDE{data.NSIDE}_{tag}.png'
+    outfile = f'{data.name}_{col}_counts_nside{data.nside}_{tag}.png'
     plt.savefig(os.path.join(data.out_figures, 'systematics-check', outfile), dpi=300)
     plt.close()
 
@@ -88,7 +88,7 @@ def systematics_check(data, extra_columns, tag, haslam_map=None):
 
     if haslam_map is not None:
         # Get Haslam
-        haslam = get_haslam(data.NSIDE, haslam_map)
+        haslam = get_haslam(data.nside, haslam_map)
         data.hpx_table['haslam_temp'] = haslam
         standard_columns += ['haslam_temp']
 
@@ -119,9 +119,9 @@ def main():
     with open(path.with_suffix('.json')) as infile:
         params = json.load(infile)[0]
 
-    catalog = Table.read(params['catalog']['path'])
-    data = SkyData(catalog, params['catalog']['name'], **params['columns'])
-    data.to_healpix_map(NSIDE=nside)
+    table = Table.read(params['catalog']['path'])
+    catalog = CatalogData(table, params['catalog']['name'], **params['columns'])
+    data = catalog.to_healpix_map(nside=nside)
 
     outdir = os.path.join(data.out_figures, 'systematics-check')
     if not os.path.exists(outdir):
@@ -131,14 +131,14 @@ def main():
     systematics_check(data, columns, tag='nocuts', haslam_map=haslam_map)
 
     # Apply standard cuts
-    data.apply_cuts(flux_cut=flux_cut)
+    catalog.apply_cuts(flux_cut=flux_cut)
     if 'cuts' in params:
-        data.apply_cuts(**params['cuts'])
+        catalog.apply_cuts(**params['cuts'])
     # Additional cuts
     if 'additional_cuts' in params:
         for cut in params['additional_cuts']:
-            data.apply_additional_cuts(**cut)
-    data.to_healpix_map(NSIDE=nside)
+            catalog.apply_additional_cuts(**cut)
+    data = catalog.to_healpix_map(nside=nside)
 
     # Now with masks
     systematics_check(data, columns, tag='cuts', haslam_map=haslam_map)
@@ -156,8 +156,8 @@ def new_argument_parser():
                         help="""Name of the catalog to fit dipole. Name should
                                 match a corresponding json file in the 
                                 parsets directory (withouth the extension).""")
-    parser.add_argument("--nside", default=32, type=int,
-                        help="NSIDE parameter for HEALPix map")
+    parser.add_argument("--nside", default=64, type=int,
+                        help="nside parameter for HEALPix map")
     parser.add_argument("--flux_cut", default=None, type=float,
                         help="""Lower flux density limit, will overwrite the value
                                 present in the parameter json file.""")

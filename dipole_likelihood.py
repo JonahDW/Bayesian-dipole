@@ -52,7 +52,7 @@ def estimate_dipole(data, priors, injection_parameters, extra_fit, fit_val,
         # Determine median rms and do power law fit
         if data.nside is not None:
             # Check if input is HEALPix map
-            if fit_val.endswith('.fits'):
+            if fit_val is not None and fit_val.endswith('.fits'):
                 rms_map = hp.read_map(fit_val)
             else:
                 rms_map = data.pix_table['rms']

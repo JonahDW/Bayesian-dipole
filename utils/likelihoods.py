@@ -189,7 +189,7 @@ class RMSLikelihood(bilby.Likelihood):
 
         # Mean counts as power law
         model = dipole*(self.obs_rms/self.sigma_ref)**(-x)
-        lnl = self.lnl_func(self.obs, model, self.parameters)
+        lnl = self.lnl_func(self.obs_counts, model, self.parameters)
         return lnl
 
 class LinearLikelihood(bilby.Likelihood):
@@ -240,12 +240,12 @@ class LinearLikelihood(bilby.Likelihood):
         dipole_theta, dipole_phi = helpers.RADECtoTHETAPHI(dipole_ra, dipole_dec)
         dipole_direction = hp.ang2vec(dipole_theta, dipole_phi)
 
-        dipole = helpers.make_dipole_discrete(self.theta, self.phi,
-                                              amplitude, dipole_direction)
+        dipole = helpers.make_dipole(self.theta, self.phi,
+                                     amplitude, dipole_direction)
 
         # Mean counts as absolute cosine
-        model = dipole * (1 - lin_amp * self.obs_ang)
-        lnl = self.lnl_func(self.obs, model, self.parameters)
+        model = dipole * (1 - lin_amp * self.obs_lin)
+        lnl = self.lnl_func(self.obs_counts, model, self.parameters)
         return lnl
 
 class MultiLikelihood(bilby.Likelihood):
@@ -264,6 +264,7 @@ class MultiLikelihood(bilby.Likelihood):
         parameters = {'amp': None, 'dipole_ra': None, 'dipole_dec': None}
         for i in range(len(all_obs)):
             parameters[f'monopole_{i}'] = None
+            parameters[f'p_{i}'] = None
 
         self.all_obs = all_obs
 
@@ -272,8 +273,6 @@ class MultiLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
-            for i in range(len(all_obs)):
-                parameters[f'p_{i}'] = None
 
         # Initialise parameters
         super().__init__(parameters)
@@ -330,6 +329,7 @@ class MultiVelocityLikelihood(bilby.Likelihood):
         parameters = {'beta': None, 'dipole_ra': None, 'dipole_dec': None}
         for i in range(len(all_obs)):
             parameters[f'monopole_{i}'] = None
+            parameters[f'p_{i}'] = None
 
         self.all_obs = all_obs
         self.alpha = alpha
@@ -340,8 +340,6 @@ class MultiVelocityLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
-            for i in range(len(all_obs)):
-                parameters[f'p_{i}'] = None
 
         # Initialise parameters
         super().__init__(parameters)
@@ -400,6 +398,7 @@ class MultiCombinedLikelihood(bilby.Likelihood):
         parameters = {'beta': None, 'amp': None, 'dipole_ra': None, 'dipole_dec': None}
         for i in range(len(all_obs)):
             parameters[f'monopole_{i}'] = None
+            parameters[f'p_{i}'] = None
 
         self.all_obs = all_obs
         self.alpha = alpha
@@ -410,8 +409,6 @@ class MultiCombinedLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
-            for i in range(len(all_obs)):
-                parameters[f'p_{i}'] = None
 
         # Initialise parameters
         super().__init__(parameters)
@@ -473,6 +470,7 @@ class MultiCombinedDirLikelihood(bilby.Likelihood):
                       'amp': None, 'dipole_ra': None, 'dipole_dec': None}
         for i in range(len(all_obs)):
             parameters[f'monopole_{i}'] = None
+            parameters[f'p_{i}'] = None
 
         self.all_obs = all_obs
         self.alpha = alpha
@@ -483,8 +481,6 @@ class MultiCombinedDirLikelihood(bilby.Likelihood):
             self.lnl_func = lnl_poisson
         if stat == 'nb':
             self.lnl_func = lnl_negativebinomial
-            for i in range(len(all_obs)):
-                parameters[f'p_{i}'] = None
 
         # Initialise parameters
         super().__init__(parameters)
